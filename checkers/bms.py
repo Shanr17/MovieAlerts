@@ -150,6 +150,86 @@ def _search_movie(city: str, city_code: str, movie_name: str) -> dict | None:
     return None
 
 
+BMS_GENERIC_WORDS = {
+    "cinema", "cinemas", "theatre", "theatres", "complex", "multiplex",
+    "screen", "screens", "mall", "a/c", "ac", "dts", "rgb", "laser",
+    "atmos", "dolby", "4k", "2k", "pondicherry", "puducherry", "chennai", "bangalore"
+}
+
+
+def _match_theater_venue(target_theater: str, venue_name: str, venue_code: str = "", venue_slug: str = "") -> bool:
+    """Strictly match user-targeted theater against a specific venue name."""
+    q_tokens = [
+        t for t in re.split(r'[\s:,\.-]+', target_theater.lower())
+        if len(t) > 2 and t not in BMS_GENERIC_WORDS
+    ]
+    v_text = f"{venue_name} {venue_code} {venue_slug}".lower()
+
+    if not q_tokens:
+        return target_theater.lower() in venue_name.lower()
+
+    return all(tok in v_text for tok in q_tokens)
+
+
+def _extract_active_venues(html: str) -> list:
+    """Extract all active theaters and their exact showtimes from BMS buytickets page."""
+    venues = []
+
+    # Strategy 1: JSON state extraction (authoritative)
+    venue_matches = []
+    for m in re.finditer(r'"venueCode"\s*:\s*"([A-Z0-9]+)"[^}]*"venueName"\s*:\s*"([^"]+)"', html):
+        code = m.group(1)
+        name = m.group(2)
+        start = m.start()
+        venue_matches.append((code, name, start))
+
+    seen = set()
+    unique_venues = []
+    for code, name, start in venue_matches:
+        if code not in seen:
+            seen.add(code)
+            unique_venues.append((code, name, start))
+
+    if unique_venues:
+        for i, (code, name, start) in enumerate(unique_venues):
+            end = unique_venues[i + 1][2] if i + 1 < len(unique_venues) else start + 30000
+            block = html[start:end]
+            times = re.findall(r'"title"\s*:\s*"((?:0?[1-9]|1[0-2]):[0-5][0-9]\s*(?:AM|PM))"', block)
+            venues.append({
+                "code": code,
+                "name": name,
+                "showtimes": list(dict.fromkeys(times))
+            })
+        return venues
+
+    # Strategy 2: DOM buytickets links fallback
+    dom_matches = re.finditer(r'/cinemas/[^/]+/([^/]+)/buytickets/([A-Z0-9]+)/\d+', html)
+    dom_venues = []
+    for m in dom_matches:
+        slug = m.group(1)
+        code = m.group(2)
+        start = m.start()
+        surround = html[max(0, start - 300):min(len(html), start + 300)]
+        alt_match = re.search(r'alt="([^"]+)"', surround)
+        vname = alt_match.group(1) if alt_match else slug.replace("-", " ").title()
+        if code not in seen:
+            seen.add(code)
+            dom_venues.append((code, vname, slug, start))
+
+    for i, (code, name, slug, start) in enumerate(dom_venues):
+        end = dom_venues[i + 1][3] if i + 1 < len(dom_venues) else start + 4000
+        block = html[start:end]
+        times = re.findall(r'\b(?:0?[1-9]|1[0-2]):[0-5][0-9]\s*(?:AM|PM)\b', block)
+        venues.append({
+            "code": code,
+            "name": name,
+            "slug": slug,
+            "showtimes": list(dict.fromkeys(times))
+        })
+
+    return venues
+
+
 def _check_showtimes_page(city: str, city_code: str, movie_info: dict, date_str: str, theater_name: str) -> dict:
     """Check BMS buytickets page for a movie on a specific date."""
     slug = movie_info.get("slug", movie_info["name"].lower().replace(" ", "-"))
@@ -173,37 +253,16 @@ def _check_showtimes_page(city: str, city_code: str, movie_info: dict, date_str:
 
                 html = resp.read().decode("utf-8", errors="ignore")
 
-            # Check if theater matches in page
-            th_parts = [p.lower() for p in re.split(r'[\s:,\.-]+', theater_name) if len(p) > 3]
-            html_lower = html.lower()
-
-            found_venue = False
-            if _fuzzy_match(theater_name, html, threshold=0.6):
-                found_venue = True
-            elif any(p in html_lower for p in th_parts):
-                found_venue = True
-
-            if found_venue:
-                times = []
-                for p in th_parts:
-                    pos = html_lower.find(p)
-                    if pos != -1:
-                        # Extract showtimes from the venue's section (approx 3500 chars)
-                        sec = html[pos:pos + 3500]
-                        sec_times = re.findall(r'\b(?:0?[1-9]|1[0-2]):[0-5][0-9]\s*(?:AM|PM)\b', sec, re.IGNORECASE)
-                        if sec_times:
-                            times = list(dict.fromkeys(sec_times))
-                            break
-
-                if not times:
-                    all_times = re.findall(r'\b(?:0?[1-9]|1[0-2]):[0-5][0-9]\s*(?:AM|PM)\b', html, re.IGNORECASE)
-                    times = list(dict.fromkeys(all_times))
-
-                return {
-                    "available": True,
-                    "booking_url": url,
-                    "showtimes": times
-                }
+            # Extract active theaters specifically showing this movie on this date
+            venues = _extract_active_venues(html)
+            for v in venues:
+                if _match_theater_venue(theater_name, v["name"], v.get("code", ""), v.get("slug", "")) and v["showtimes"]:
+                    return {
+                        "available": True,
+                        "booking_url": url,
+                        "showtimes": v["showtimes"],
+                        "venue_name": v["name"]
+                    }
 
         except urllib.error.HTTPError as e:
             if e.code == 404:
