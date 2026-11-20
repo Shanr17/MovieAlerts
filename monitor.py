@@ -9,8 +9,16 @@ import sys
 import os
 import time
 import argparse
-from datetime import datetime
+from datetime import datetime, timezone, timedelta
 from pathlib import Path
+
+# Indian Standard Time (IST, UTC+05:30)
+IST = timezone(timedelta(hours=5, minutes=30))
+
+
+def get_now_ist_iso() -> str:
+    """Return current timestamp in IST with explicit timezone offset (+05:30)."""
+    return datetime.now(timezone.utc).astimezone(IST).isoformat()
 
 # Add project root to path
 sys.path.insert(0, str(Path(__file__).parent))
@@ -263,7 +271,7 @@ def run_single_check(config: dict, state: dict) -> bool:
 
                 # Update state
                 state.setdefault("alerted", {})[alert_key] = {
-                    "timestamp": datetime.now().isoformat(),
+                    "timestamp": get_now_ist_iso(),
                     "movie": result.get("movie", movie_display),
                     "theater": result.get("theater", theater_display),
                     "platform": result["platform"],
@@ -274,7 +282,7 @@ def run_single_check(config: dict, state: dict) -> bool:
                     },
                 }
 
-    state["last_check"] = datetime.now().isoformat()
+    state["last_check"] = get_now_ist_iso()
     save_state(state)
 
     if not any_available:

@@ -1468,6 +1468,28 @@
             }
         }
 
+        function formatDateTimeIST(isoStr) {
+            if (!isoStr) return '';
+            let s = String(isoStr).trim();
+            // If naive without timezone offset, runner was in UTC, so treat as UTC
+            if (!s.endsWith('Z') && !/[+-]\d{2}:?\d{2}$/.test(s)) {
+                s += 'Z';
+            }
+            const d = new Date(s);
+            if (isNaN(d.getTime())) return isoStr;
+
+            return d.toLocaleString('en-IN', {
+                timeZone: 'Asia/Kolkata',
+                day: '2-digit',
+                month: '2-digit',
+                year: 'numeric',
+                hour: '2-digit',
+                minute: '2-digit',
+                second: '2-digit',
+                hour12: true
+            }) + ' IST';
+        }
+
         async function loadLastStatus() {
             const gh = getGitHub();
             if (!gh) return;
@@ -1481,16 +1503,24 @@
                     const content = document.getElementById('last-status-content');
                     card.style.display = 'block';
 
-                    let html = `<p style="color:var(--text-dim);">Last check: ${new Date(state.last_check).toLocaleString()}</p>`;
+                    let html = `<p style="color:var(--text-dim); font-size:0.9em;">🕒 Last check: <strong>${formatDateTimeIST(state.last_check)}</strong></p>`;
 
                     if (Object.keys(state.alerted || {}).length > 0) {
-                        html += '<div style="margin-top:10px; padding:12px; background:rgba(0,200,83,0.1); border-radius:8px;">';
-                        html += '<strong style="color:var(--success);">🎉 Bookings Found!</strong><br>';
+                        html += '<div style="margin-top:12px; padding:14px; background:rgba(0,200,83,0.1); border:1px solid rgba(0,200,83,0.3); border-radius:8px;">';
+                        html += '<strong style="color:var(--success); font-size:1.05em;">🎉 Bookings Found!</strong><br>';
                         for (const [key, info] of Object.entries(state.alerted)) {
-                            html += `<p style="margin-top:6px;">${info.platform} — alerted at ${new Date(info.timestamp).toLocaleString()}</p>`;
-                            if (info.booking_url) {
-                                html += `<a href="${info.booking_url}" target="_blank" style="color:var(--accent);">🔗 Book Now</a>`;
+                            const movieTitle = info.movie || 'Movie';
+                            const theaterTitle = info.theater ? ` @ ${info.theater}` : '';
+                            html += `<div style="margin-top:10px; padding-top:8px; border-top:1px dashed rgba(255,255,255,0.1);">`;
+                            html += `<p style="margin-bottom:3px;"><strong>🎬 ${movieTitle}</strong>${theaterTitle}</p>`;
+                            html += `<p style="font-size:0.85em; color:var(--text-dim); margin-bottom:4px;">${info.platform} — alerted at <span style="color:#eee;">${formatDateTimeIST(info.timestamp)}</span></p>`;
+                            if (info.showtimes && info.showtimes.length) {
+                                html += `<p style="font-size:0.85em; color:#90caf9; margin-bottom:6px;">Shows: ${info.showtimes.join(', ')}</p>`;
                             }
+                            if (info.booking_url) {
+                                html += `<a href="${info.booking_url}" target="_blank" style="display:inline-block; font-size:0.9em; color:var(--accent); text-decoration:none; font-weight:600;">🔗 Book Now on ${info.platform} &rarr;</a>`;
+                            }
+                            html += `</div>`;
                         }
                         html += '</div>';
                     } else {

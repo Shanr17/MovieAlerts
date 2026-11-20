@@ -55,10 +55,14 @@ def _format_embed(booking_info: dict) -> dict:
     return embed
 
 
+from datetime import datetime, timezone, timedelta
+
+IST = timezone(timedelta(hours=5, minutes=30))
+
+
 def _get_timestamp() -> str:
-    """Get current timestamp string."""
-    from datetime import datetime
-    return datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+    """Get current IST timestamp string."""
+    return datetime.now(timezone.utc).astimezone(IST).strftime("%d %b %Y, %I:%M:%S %p IST")
 
 
 def send(config: dict, booking_info: dict) -> bool:

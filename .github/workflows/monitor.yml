@@ -23,6 +23,7 @@ on:
       - 'README.md'
 
 env:
+  TZ: 'Asia/Kolkata'
   # Movie & Theater config (override config.json)
   MOVIE_NAME: ${{ secrets.MOVIE_NAME }}
   THEATER_NAME: ${{ secrets.THEATER_NAME }}
@@ -77,5 +78,5 @@ jobs:
           git config user.name "Movie Alert Bot"
           git config user.email "movie-alert-bot@users.noreply.github.com"
           git add state.json
-          git diff --cached --quiet || git commit -m "🎬 Update alert state [$(date -u '+%Y-%m-%d %H:%M UTC')]"
+          git diff --cached --quiet || git commit -m "🎬 Update alert state [$(TZ='Asia/Kolkata' date '+%Y-%m-%d %H:%M IST')]"
           git push
