@@ -110,6 +110,47 @@ def _make_alert_key(platform: str, movie: str, theater: str, target_date: str = 
     return f"{platform}|{movie}|{theater}|{target_date}".lower()
 
 
+def get_targets(config: dict) -> list:
+    """Extract list of movie monitoring targets from config."""
+    targets = []
+    watchlist = config.get("watchlist", [])
+    if isinstance(watchlist, list) and len(watchlist) > 0:
+        for idx, item in enumerate(watchlist):
+            if isinstance(item, dict) and item.get("movie"):
+                item_platforms = item.get("platforms") or config.get("platforms", {"bms": True, "pvr": True, "district": True})
+                item_city = item.get("city") or config.get("city", "pondicherry")
+                item_city_code = item.get("city_code") or config.get("city_code", "POND")
+                item_date = item.get("target_date") if item.get("target_date") is not None else config.get("target_date", "")
+
+                targets.append({
+                    "id": str(item.get("id", idx + 1)),
+                    "movie": item.get("movie", "").strip(),
+                    "theater": item.get("theater", "").strip(),
+                    "city": item_city.strip(),
+                    "city_code": item_city_code.strip(),
+                    "target_date": str(item_date).strip(),
+                    "platforms": item_platforms,
+                    "check_next_days": item.get("check_next_days", config.get("check_next_days", 30)),
+                    "alerts": config.get("alerts", {}),
+                })
+
+    # If no watchlist entries, fall back to top-level movie config
+    if not targets and config.get("movie"):
+        targets.append({
+            "id": "1",
+            "movie": config.get("movie", "").strip(),
+            "theater": config.get("theater", "").strip(),
+            "city": config.get("city", "pondicherry").strip(),
+            "city_code": config.get("city_code", "POND").strip(),
+            "target_date": config.get("target_date", "").strip(),
+            "platforms": config.get("platforms", {"bms": True, "pvr": True, "district": True}),
+            "check_next_days": config.get("check_next_days", 30),
+            "alerts": config.get("alerts", {}),
+        })
+
+    return targets
+
+
 def run_checkers(config: dict) -> list:
     """Run all enabled platform checkers."""
     results = []
@@ -174,56 +215,73 @@ def send_notifications(config: dict, booking_info: dict) -> dict:
 
 
 def run_single_check(config: dict, state: dict) -> bool:
-    """Run one pass of checkers and send notifications if tickets found."""
-    results = run_checkers(config)
+    """Run one pass of checkers across all targets and send notifications if tickets found."""
+    targets = get_targets(config)
+    if not targets:
+        logger.warning("⚠️ No movies in watchlist to check.")
+        return False
+
     any_available = False
 
-    for result in results:
-        if result["available"]:
-            target_date = config.get("target_date", "")
-            alert_key = _make_alert_key(
-                result["platform"], result["movie"], result["theater"], target_date
-            )
+    for target in targets:
+        movie_display = target["movie"]
+        theater_display = target["theater"] or "Any Theater"
+        city_display = target["city"]
+        target_date = target.get("target_date", "")
 
-            # Check if we already alerted for this
-            if alert_key in state.get("alerted", {}):
-                last_alert = state["alerted"][alert_key]
-                logger.info(
-                    f"ℹ️ Already alerted for {result['platform']} "
-                    f"on {last_alert['timestamp']}"
+        logger.info(f"\n🎯 [Watchlist] Checking: '{movie_display}' at '{theater_display}' ({city_display})")
+        if target_date:
+            logger.info(f"   Target Date: {target_date}")
+
+        results = run_checkers(target)
+
+        for result in results:
+            if result.get("available", False):
+                alert_key = _make_alert_key(
+                    result["platform"], result.get("movie", movie_display), result.get("theater", theater_display), target_date
                 )
-                continue
 
-            any_available = True
-            logger.info(f"\n{'🎉' * 10}")
-            logger.info(f"BOOKING OPEN on {result['platform']}!")
-            logger.info(f"{'🎉' * 10}\n")
+                # Check if we already alerted for this
+                if alert_key in state.get("alerted", {}):
+                    last_alert = state["alerted"][alert_key]
+                    logger.info(
+                        f"ℹ️ Already alerted for {result['platform']} ({result.get('movie', movie_display)}) "
+                        f"on {last_alert.get('timestamp')}"
+                    )
+                    continue
 
-            # Send notifications
-            notif_results = send_notifications(config, result)
+                any_available = True
+                logger.info(f"\n{'🎉' * 10}")
+                logger.info(f"BOOKING OPEN on {result['platform']} for {result.get('movie', movie_display)}!")
+                logger.info(f"{'🎉' * 10}\n")
 
-            # Update state
-            state.setdefault("alerted", {})[alert_key] = {
-                "timestamp": datetime.now().isoformat(),
-                "platform": result["platform"],
-                "showtimes": result.get("showtimes", []),
-                "booking_url": result.get("booking_url", ""),
-                "notification_results": {
-                    k: v for k, v in notif_results.items()
-                },
-            }
+                # Send notifications
+                notif_results = send_notifications(config, result)
+
+                # Update state
+                state.setdefault("alerted", {})[alert_key] = {
+                    "timestamp": datetime.now().isoformat(),
+                    "movie": result.get("movie", movie_display),
+                    "theater": result.get("theater", theater_display),
+                    "platform": result["platform"],
+                    "showtimes": result.get("showtimes", []),
+                    "booking_url": result.get("booking_url", ""),
+                    "notification_results": {
+                        k: v for k, v in notif_results.items()
+                    },
+                }
 
     state["last_check"] = datetime.now().isoformat()
     save_state(state)
 
     if not any_available:
-        logger.info("📭 No new bookings found.")
+        logger.info("\n📭 No new bookings found across watchlist.")
 
     return any_available
 
 
 def main():
-    """Main entrypoint supporting multi-check intervals."""
+    """Main entrypoint supporting multi-check intervals and watchlists."""
     parser = argparse.ArgumentParser(description="Movie Ticket Alert Monitor")
     parser.add_argument(
         "--iterations",
@@ -249,23 +307,21 @@ def main():
     logger.info("=" * 60)
 
     config = load_config()
-    movie = config.get("movie", "")
-    theater = config.get("theater", "")
-    city = config.get("city", "")
+    targets = get_targets(config)
 
-    if not movie or not theater or not city:
-        logger.error("❌ Missing required config: movie, theater, or city")
-        logger.error("   Set them in config.json or as environment variables")
+    if not targets:
+        logger.error("❌ Missing required config: No movies found in watchlist or config.json")
+        logger.error("   Add movies via the dashboard or set them in config.json")
         sys.exit(1)
 
     if not config.get("active", True):
         logger.info("⏸️ Monitor is PAUSED (active=false). Exiting.")
         return
 
-    logger.info(f"🎥 Movie:       {movie}")
-    logger.info(f"🏢 Theater:     {theater}")
-    logger.info(f"🏙️ City:        {city}")
-    logger.info(f"🎯 Target Date: {config.get('target_date') or 'Any upcoming date'}")
+    logger.info(f"📋 Watching {len(targets)} movie(s):")
+    for idx, t in enumerate(targets, 1):
+        date_str = f"Target Date: {t['target_date']}" if t.get('target_date') else "Any Date"
+        logger.info(f"   {idx}. {t['movie']} | {t['theater'] or 'Any Theater'} ({t['city']}) | {date_str}")
     logger.info(f"⏱️ Interval:    {args.interval}s (2.5 mins)")
     logger.info("-" * 60)
 

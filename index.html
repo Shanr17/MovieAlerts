@@ -250,9 +250,112 @@
         .row { display: flex; gap: 12px; }
         .row > * { flex: 1; }
 
+        .watchlist-container {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+            margin-top: 12px;
+        }
+
+        .watchlist-item {
+            background: var(--surface2);
+            border: 1px solid var(--border);
+            border-radius: 10px;
+            padding: 16px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            gap: 14px;
+            transition: all 0.2s ease;
+        }
+
+        .watchlist-item:hover {
+            border-color: var(--accent);
+        }
+
+        .watchlist-info {
+            flex: 1;
+        }
+
+        .watchlist-title {
+            font-size: 1.05em;
+            font-weight: 700;
+            color: #fff;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .watchlist-details {
+            font-size: 0.85em;
+            color: var(--text-dim);
+            margin-top: 6px;
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+            align-items: center;
+        }
+
+        .watchlist-badge {
+            background: var(--accent2);
+            color: #90caf9;
+            padding: 3px 8px;
+            border-radius: 6px;
+            font-size: 0.8em;
+            font-weight: 600;
+        }
+
+        .watchlist-badge.target-date {
+            background: rgba(233, 69, 96, 0.2);
+            color: #ff8597;
+            border: 1px solid rgba(233, 69, 96, 0.4);
+        }
+
+        .watchlist-badge.city {
+            background: rgba(255, 255, 255, 0.08);
+            color: #ccc;
+        }
+
+        .watchlist-actions {
+            display: flex;
+            gap: 8px;
+            align-items: center;
+        }
+
+        .btn-remove {
+            background: rgba(233, 69, 96, 0.15);
+            border: 1px solid rgba(233, 69, 96, 0.4);
+            color: #ff6b6b;
+            border-radius: 6px;
+            padding: 8px 12px;
+            cursor: pointer;
+            font-size: 0.85em;
+            font-weight: 600;
+            transition: all 0.2s;
+            white-space: nowrap;
+        }
+
+        .btn-remove:hover {
+            background: var(--accent);
+            color: white;
+        }
+
+        .watchlist-empty {
+            text-align: center;
+            padding: 24px 16px;
+            color: var(--text-dim);
+            background: var(--surface2);
+            border-radius: 8px;
+            border: 1px dashed var(--border);
+            font-size: 0.9em;
+            line-height: 1.5;
+        }
+
         @media (max-width: 600px) {
             .row { flex-direction: column; }
             .checkbox-item { min-width: 100%; }
+            .watchlist-item { flex-direction: column; align-items: flex-start; }
+            .watchlist-actions { width: 100%; justify-content: flex-end; margin-top: 8px; }
         }
 
         .loading { opacity: 0.6; pointer-events: none; }
@@ -280,9 +383,25 @@
             </div>
         </div>
 
-        <!-- Movie & Theater Selection -->
+        <!-- Monitored Watchlist Card -->
+        <div class="card" id="watchlist-card">
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px;">
+                <h2><span class="icon">📋</span> Monitored Watchlist (<span id="watchlist-count">0</span>)</h2>
+                <button type="button" class="btn btn-secondary" onclick="clearWatchlist()" style="width:auto; padding:6px 14px; font-size:0.8em; margin:0;">
+                    🗑️ Clear All
+                </button>
+            </div>
+            <p style="color:var(--text-dim); font-size:0.85em; margin-bottom:12px;">
+                All movies below are actively tracked. GitHub Actions checks BMS, PVR, and District every 2.5 minutes.
+            </p>
+            <div id="watchlist-items" class="watchlist-container">
+                <!-- Rendered dynamically -->
+            </div>
+        </div>
+
+        <!-- Add Movie & Theater Form -->
         <div class="card">
-            <h2><span class="icon">🎥</span> Movie & Theater</h2>
+            <h2><span class="icon">➕</span> Add Movie Alert</h2>
 
             <label>City</label>
             <select id="city" onchange="onCityChange()">
@@ -357,8 +476,14 @@
                 <input type="text" id="custom-city" placeholder="e.g. Pondicherry, Salem, Hosur, etc.">
             </div>
 
-            <label>Movie Name</label>
-            <input type="text" id="movie" placeholder="Type movie name (e.g. your movie)...">
+            <label style="margin-top:16px;">Movie Name</label>
+            <div style="display:flex; flex-direction:column; gap:8px;">
+                <select id="movie-select" onchange="onMovieSelectChange(this.value)">
+                    <option value="">-- Choose Live Movie or Type Below --</option>
+                </select>
+                <input type="text" id="movie" list="movies-list" placeholder="Type movie name (e.g. DUNE PART THREE, Pushpa 2)...">
+                <datalist id="movies-list"></datalist>
+            </div>
 
             <label style="margin-top:16px;">Theater Name</label>
             <div style="display:flex; flex-direction:column; gap:8px;">
@@ -377,16 +502,10 @@
                 </button>
             </div>
             <small style="color:var(--text-dim); font-size:0.8em; margin-top:4px; display:block;">
-                🎯 <strong>Target Date Filter:</strong> If a movie is already open up to 22/11, select <strong>23/11</strong> here. You will <em>only</em> be alerted when bookings open for that specific date!
+                🎯 <strong>Target Date Filter:</strong> If you want tickets for a specific date (e.g. 2026-12-18), select it above.
             </small>
 
-            <label style="margin-top:16px;">Check next N days (if no target date set)</label>
-            <input type="number" id="check-days" value="7" min="1" max="30">
-        </div>
-
-        <!-- Platforms -->
-        <div class="card">
-            <h2><span class="icon">📱</span> Booking Platforms</h2>
+            <label style="margin-top:16px;">Booking Platforms to Check</label>
             <div class="checkbox-group">
                 <label class="checkbox-item checked">
                     <input type="checkbox" id="plt-bms" checked onchange="toggleCheck(this)">
@@ -401,6 +520,10 @@
                     District
                 </label>
             </div>
+
+            <button type="button" class="btn btn-secondary" onclick="addCurrentMovieToWatchlist()" style="margin-top:20px; background:linear-gradient(135deg, #0f3460, #16213e); border:1px solid #4e54c8; color:white; font-size:1.05em; padding:14px;">
+                ➕ Add Movie to Watchlist
+            </button>
         </div>
 
         <!-- Alert Channels -->
@@ -910,58 +1033,242 @@
             return resp.status === 204 ? null : resp.json();
         }
 
-        // === Build Config ===
-        function buildConfig() {
-            const cityVal = document.getElementById('city').value;
-            let city = '';
-            let cityCode = '';
+        // === Watchlist Management ===
+        let watchlist = [];
 
-            if (cityVal === 'other') {
-                const customCity = document.getElementById('custom-city').value.trim();
-                city = customCity.toLowerCase();
-                cityCode = customCity.toUpperCase().replace(/[^A-Z]/g, '').substring(0, 4);
-            } else if (cityVal) {
-                [city, cityCode] = cityVal.split('|');
+        function renderWatchlist() {
+            const container = document.getElementById('watchlist-items');
+            const countEl = document.getElementById('watchlist-count');
+            if (countEl) countEl.textContent = watchlist.length;
+
+            if (!container) return;
+
+            if (watchlist.length === 0) {
+                container.innerHTML = `
+                    <div class="watchlist-empty">
+                        📭 Your watchlist is currently empty.<br>
+                        Choose your movie and theater below and click <strong>"➕ Add Movie to Watchlist"</strong>.
+                    </div>
+                `;
+                return;
             }
 
-            return {
+            container.innerHTML = '';
+            watchlist.forEach((item, index) => {
+                const itemEl = document.createElement('div');
+                itemEl.className = 'watchlist-item';
+
+                const platformBadges = [];
+                if (item.platforms?.bms) platformBadges.push('BMS');
+                if (item.platforms?.pvr) platformBadges.push('PVR');
+                if (item.platforms?.district) platformBadges.push('District');
+
+                const dateBadge = item.target_date
+                    ? `<span class="watchlist-badge target-date">🎯 Date: ${item.target_date}</span>`
+                    : `<span class="watchlist-badge">📅 Any Date</span>`;
+
+                const theaterDisplay = item.theater || 'Any Theater';
+                const cityDisplay = (item.city || 'Pondicherry').toUpperCase();
+
+                itemEl.innerHTML = `
+                    <div class="watchlist-info">
+                        <div class="watchlist-title">
+                            <span>🎬 ${item.movie}</span>
+                        </div>
+                        <div class="watchlist-details">
+                            <span>🏢 ${theaterDisplay}</span>
+                            <span class="watchlist-badge city">🏙️ ${cityDisplay}</span>
+                            ${dateBadge}
+                            <span class="watchlist-badge">📱 ${platformBadges.join(', ') || 'All'}</span>
+                        </div>
+                    </div>
+                    <div class="watchlist-actions">
+                        <button type="button" class="btn-remove" onclick="removeWatchlistItem(${index})" title="Remove movie from alert">
+                            🗑️ Remove
+                        </button>
+                    </div>
+                `;
+                container.appendChild(itemEl);
+            });
+        }
+
+        function removeWatchlistItem(index) {
+            if (index >= 0 && index < watchlist.length) {
+                const removed = watchlist.splice(index, 1);
+                renderWatchlist();
+                showStatus('info', `Removed "${removed[0].movie}" from watchlist. Click "Save Config & Start Monitoring" below to sync with GitHub.`);
+            }
+        }
+
+        function clearWatchlist() {
+            if (watchlist.length === 0) return;
+            if (confirm('Are you sure you want to clear all movies from your watchlist?')) {
+                watchlist = [];
+                renderWatchlist();
+                showStatus('info', 'Watchlist cleared. Click "Save Config & Start Monitoring" below to sync with GitHub.');
+            }
+        }
+
+        function addCurrentMovieToWatchlist() {
+            const movieInput = document.getElementById('movie');
+            const theaterInput = document.getElementById('theater');
+            const citySel = document.getElementById('city');
+            const targetDateInput = document.getElementById('target-date');
+
+            const movie = (movieInput.value || '').trim();
+            const theater = (theaterInput.value || '').trim();
+
+            let city = 'pondicherry';
+            let cityCode = 'POND';
+
+            if (citySel.value === 'other') {
+                const customCity = (document.getElementById('custom-city').value || '').trim();
+                if (customCity) {
+                    city = customCity.toLowerCase();
+                    cityCode = customCity.toUpperCase().replace(/[^A-Z]/g, '').substring(0, 4);
+                }
+            } else if (citySel.value) {
+                [city, cityCode] = citySel.value.split('|');
+            }
+
+            if (!movie) {
+                alert('Please enter or select a movie name!');
+                movieInput.focus();
+                return;
+            }
+
+            if (!theater) {
+                alert('Please select or enter a theater name!');
+                theaterInput.focus();
+                return;
+            }
+
+            const targetDate = (targetDateInput.value || '').trim();
+
+            const newItem = {
+                id: Date.now().toString(),
+                movie: movie,
+                theater: theater,
                 city: city,
                 city_code: cityCode,
-                movie: document.getElementById('movie').value.trim(),
-                theater: document.getElementById('theater').value.trim(),
-                target_date: document.getElementById('target-date').value.trim(),
+                target_date: targetDate,
                 platforms: {
                     bms: document.getElementById('plt-bms').checked,
                     pvr: document.getElementById('plt-pvr').checked,
                     district: document.getElementById('plt-district').checked,
-                },
-                alerts: {
-                    telegram: {
-                        enabled: document.getElementById('alert-telegram').checked,
-                        bot_token: document.getElementById('tg-token').value.trim(),
-                        chat_id: document.getElementById('tg-chatid').value.trim(),
-                    },
-                    discord: {
-                        enabled: document.getElementById('alert-discord').checked,
-                        webhook_url: document.getElementById('dc-webhook').value.trim(),
-                    },
-                    ntfy: {
-                        enabled: document.getElementById('alert-ntfy').checked,
-                        topic: document.getElementById('ntfy-topic').value.trim(),
-                        server: 'https://ntfy.sh',
-                    },
-                },
-                check_next_days: parseInt(document.getElementById('check-days').value) || 7,
-                active: true,
+                }
             };
+
+            // Prevent exact duplicates
+            const isDup = watchlist.some(item =>
+                item.movie.toLowerCase() === newItem.movie.toLowerCase() &&
+                item.theater.toLowerCase() === newItem.theater.toLowerCase() &&
+                (item.target_date || '') === (newItem.target_date || '')
+            );
+
+            if (isDup) {
+                alert(`"${newItem.movie}" at "${newItem.theater}" (${newItem.target_date || 'Any Date'}) is already in your watchlist!`);
+                return;
+            }
+
+            watchlist.push(newItem);
+            renderWatchlist();
+
+            // Scroll to watchlist card so user sees the addition
+            document.getElementById('watchlist-card').scrollIntoView({ behavior: 'smooth' });
+
+            showStatus('success', `✅ Added "${newItem.movie}" to watchlist! Click "Save Config & Start Monitoring" to sync.`);
+
+            // Reset movie input for next movie
+            movieInput.value = '';
+            targetDateInput.value = '';
+            const movieSel = document.getElementById('movie-select');
+            if (movieSel) movieSel.value = '';
+        }
+
+        async function loadConfig() {
+            let configData = null;
+
+            // 1. Try static config.json
+            try {
+                const resp = await fetch('./config.json?t=' + Date.now());
+                if (resp.ok) {
+                    configData = await resp.json();
+                }
+            } catch (e) {
+                console.log('Static config.json load error:', e);
+            }
+
+            // 2. Try GitHub API if tokens are saved
+            const gh = getGitHub();
+            if (gh) {
+                try {
+                    const file = await githubAPI('GET', '/contents/config.json');
+                    if (file && file.content) {
+                        configData = JSON.parse(decodeURIComponent(escape(atob(file.content.replace(/\n/g, '')))));
+                    }
+                } catch (e) {
+                    // Ignore error on load
+                }
+            }
+
+            if (configData) {
+                // Populate Watchlist
+                if (Array.isArray(configData.watchlist) && configData.watchlist.length > 0) {
+                    watchlist = configData.watchlist;
+                } else if (configData.movie) {
+                    watchlist = [{
+                        id: "1",
+                        movie: configData.movie,
+                        theater: configData.theater || "",
+                        city: configData.city || "pondicherry",
+                        city_code: configData.city_code || "POND",
+                        target_date: configData.target_date || "",
+                        platforms: configData.platforms || { bms: true, pvr: true, district: true }
+                    }];
+                }
+                renderWatchlist();
+
+                // Populate Alerts settings
+                if (configData.alerts) {
+                    if (configData.alerts.telegram) {
+                        const tgCheck = document.getElementById('alert-telegram');
+                        tgCheck.checked = !!configData.alerts.telegram.enabled;
+                        toggleAlert('telegram', tgCheck);
+                        if (configData.alerts.telegram.chat_id) {
+                            document.getElementById('tg-chatid').value = configData.alerts.telegram.chat_id;
+                        }
+                    }
+                    if (configData.alerts.discord) {
+                        const dcCheck = document.getElementById('alert-discord');
+                        dcCheck.checked = !!configData.alerts.discord.enabled;
+                        toggleAlert('discord', dcCheck);
+                    }
+                    if (configData.alerts.ntfy) {
+                        const ntfyCheck = document.getElementById('alert-ntfy');
+                        ntfyCheck.checked = !!configData.alerts.ntfy.enabled;
+                        toggleAlert('ntfy', ntfyCheck);
+                        if (configData.alerts.ntfy.topic) {
+                            document.getElementById('ntfy-topic').value = configData.alerts.ntfy.topic;
+                        }
+                    }
+                }
+            } else {
+                renderWatchlist();
+            }
         }
 
         // === Actions ===
         async function saveAndDeploy() {
-            const config = buildConfig();
+            // Auto-add movie if user filled inputs but forgot to click Add Movie
+            const movieVal = (document.getElementById('movie').value || '').trim();
+            const theaterVal = (document.getElementById('theater').value || '').trim();
+            if (watchlist.length === 0 && movieVal && theaterVal) {
+                addCurrentMovieToWatchlist();
+            }
 
-            if (!config.movie || !config.theater || !config.city) {
-                showStatus('error', '❌ Please fill in city, movie name, and theater name');
+            if (watchlist.length === 0) {
+                showStatus('error', '❌ Watchlist is empty! Add at least one movie first.');
                 return;
             }
 
@@ -970,55 +1277,68 @@
             const gh = getGitHub();
             if (!gh) return;
 
-            showStatus('info', '⏳ Saving config to GitHub...');
+            showStatus('info', '⏳ Saving watchlist to GitHub...');
 
             try {
-                // NEVER commit sensitive tokens into public repo files!
-                const safeConfig = JSON.parse(JSON.stringify(config));
-                if (safeConfig.alerts && safeConfig.alerts.telegram) {
-                    safeConfig.alerts.telegram.bot_token = ""; // Kept safe in GitHub Secrets
-                }
-                if (safeConfig.alerts && safeConfig.alerts.discord) {
-                    safeConfig.alerts.discord.webhook_url = ""; // Kept safe in GitHub Secrets
-                }
+                const first = watchlist[0];
+                const safeConfig = {
+                    watchlist: watchlist,
+                    // Top-level fallbacks for backwards compatibility
+                    city: first.city || "pondicherry",
+                    city_code: first.city_code || "POND",
+                    movie: first.movie,
+                    theater: first.theater,
+                    target_date: first.target_date || "",
+                    platforms: first.platforms || { bms: true, pvr: true, district: true },
+                    alerts: {
+                        telegram: {
+                            enabled: document.getElementById('alert-telegram').checked,
+                            bot_token: "", // Kept secure in GitHub Secrets
+                            chat_id: document.getElementById('tg-chatid').value.trim(),
+                        },
+                        discord: {
+                            enabled: document.getElementById('alert-discord').checked,
+                            webhook_url: "", // Kept secure in GitHub Secrets
+                        },
+                        ntfy: {
+                            enabled: document.getElementById('alert-ntfy').checked,
+                            topic: document.getElementById('ntfy-topic').value.trim(),
+                            server: 'https://ntfy.sh',
+                        },
+                    },
+                    check_next_days: 30,
+                    active: true,
+                };
 
-                // Update config.json in repo
                 const content = btoa(unescape(encodeURIComponent(JSON.stringify(safeConfig, null, 2))));
 
-                // Get current file SHA (if exists)
                 let sha = '';
                 try {
                     const existing = await githubAPI('GET', '/contents/config.json');
                     sha = existing.sha;
                 } catch (e) {
-                    // File doesn't exist yet, that's fine
+                    // File does not exist yet
                 }
 
                 const body = {
-                    message: `🎬 Update config: ${config.movie} at ${config.theater}`,
+                    message: `🎬 Update watchlist: ${watchlist.length} movie(s) monitored`,
                     content: content,
                 };
                 if (sha) body.sha = sha;
 
                 await githubAPI('PUT', '/contents/config.json', body);
 
-                // Also save secrets (non-sensitive config)
-                // Note: GitHub Secrets API requires different permissions
-                // For now, we store alert tokens as GitHub Secrets manually
-
                 showStatus('success',
-                    `✅ Config saved! Monitoring "${config.movie}" at "${config.theater}". ` +
-                    `GitHub Actions will check every 5 minutes.`
+                    `✅ Watchlist saved! Monitoring ${watchlist.length} movie(s) across BMS, PVR & District. ` +
+                    `GitHub Actions will check every 2.5 minutes.`
                 );
 
-                // Remind about secrets
-                if (config.alerts.telegram.enabled || config.alerts.discord.enabled) {
+                if (safeConfig.alerts.telegram.enabled && !document.getElementById('tg-token').value.trim()) {
                     setTimeout(() => {
                         showStatus('info',
-                            '⚠️ Remember to add alert tokens as GitHub Secrets ' +
-                            '(Settings → Secrets → Actions). See README for details.'
+                            'ℹ️ Note: If you updated Telegram, ensure TELEGRAM_BOT_TOKEN is saved in your repo GitHub Secrets.'
                         );
-                    }, 3000);
+                    }, 3500);
                 }
 
             } catch (e) {
@@ -1115,6 +1435,7 @@
             loadLocal();
             await loadLiveMoviesDatabase();
             onCityChange();
+            await loadConfig();
             // Try to load last status if GitHub is configured
             if (document.getElementById('gh-token').value && document.getElementById('gh-repo').value) {
                 loadLastStatus();

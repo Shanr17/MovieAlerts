@@ -1,4 +1,32 @@
 {
+  "watchlist": [
+    {
+      "id": "1",
+      "movie": "DUNE PART THREE",
+      "theater": "PVR Providence Mall",
+      "city": "pondicherry",
+      "city_code": "POND",
+      "target_date": "2026-12-18",
+      "platforms": {
+        "bms": true,
+        "pvr": true,
+        "district": true
+      }
+    },
+    {
+      "id": "2",
+      "movie": "AVATAR: FIRE AND ASH",
+      "theater": "PVR Providence Mall",
+      "city": "pondicherry",
+      "city_code": "POND",
+      "target_date": "2026-12-19",
+      "platforms": {
+        "bms": true,
+        "pvr": true,
+        "district": true
+      }
+    }
+  ],
   "city": "pondicherry",
   "city_code": "POND",
   "movie": "DUNE PART THREE",
