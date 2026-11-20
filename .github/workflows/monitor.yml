@@ -18,8 +18,9 @@ on:
         default: 'false'
         type: boolean
   push:
-    paths:
-      - 'config.json'
+    paths-ignore:
+      - 'state.json'
+      - 'README.md'
 
 env:
   # Movie & Theater config (override config.json)
