@@ -360,7 +360,7 @@
             <label>Movie Name</label>
             <div style="display:flex; flex-direction:column; gap:8px;">
                 <select id="movie-select" onchange="onMovieSelectChange(this.value)">
-                    <option value="">-- Choose from Hot / Upcoming Movies --</option>
+                    <option value="">-- Select Movie (Now Playing or Upcoming) --</option>
                 </select>
                 <input type="text" id="movie" list="movies-list" placeholder="Or type movie name manually (e.g. Pushpa 2)">
                 <datalist id="movies-list"></datalist>
@@ -513,28 +513,40 @@
         }
 
         // === Movie & Theater Databases ===
-        const POPULAR_MOVIES = [
-            "Pushpa 2: The Rule",
-            "Vidaamuyarchi",
-            "Good Bad Ugly",
-            "Game Changer",
-            "Coolie",
-            "Thug Life",
+        const NOW_PLAYING_MOVIES = [
             "Kanguva",
+            "Amaran",
+            "Lucky Baskhar",
+            "Singham Again",
+            "Bhool Bhulaiyaa 3",
+            "Gladiator II",
+            "Wicked",
+            "Bloody Beggar",
+            "Brother",
+            "The Sabarmati Report",
+            "Bagheera",
+            "I Want to Talk",
             "Vettaiyan",
-            "The Greatest of All Time (GOAT)",
-            "Devara: Part 1",
-            "Kalki 2898 AD",
+            "Meiyazhagan",
+            "Lubber Pandhu"
+        ];
+
+        const UPCOMING_MOVIES = [
+            "Pushpa 2: The Rule (Dec 5)",
+            "Moana 2 (Nov 29)",
+            "Baby John (Dec 25)",
+            "Game Changer (Jan 10)",
+            "Vidaamuyarchi (Pongal)",
+            "Good Bad Ugly",
+            "Thug Life",
+            "Coolie",
             "Kantara: Chapter 1",
             "Toxic",
             "War 2",
             "Salaar: Part 2",
             "SSMB29",
-            "Gladiator II",
-            "Deadpool & Wolverine",
             "Avatar: Fire and Ash",
             "Mission: Impossible - The Final Reckoning",
-            "Moana 2",
             "Spider-Man 4"
         ];
 
@@ -667,24 +679,47 @@
         function populateMovies() {
             const movieSelect = document.getElementById('movie-select');
             const moviesList = document.getElementById('movies-list');
-            movieSelect.innerHTML = '<option value="">-- Choose from Hot / Upcoming Movies --</option>';
+            movieSelect.innerHTML = '<option value="">-- Select Movie (Now Playing or Upcoming) --</option>';
             moviesList.innerHTML = '';
 
-            POPULAR_MOVIES.forEach(m => {
+            // Group 1: Now Playing
+            const grpNow = document.createElement('optgroup');
+            grpNow.label = '🎬 NOW PLAYING (In Theaters)';
+            NOW_PLAYING_MOVIES.forEach(m => {
                 const opt = document.createElement('option');
                 opt.value = m;
-                opt.textContent = m;
-                movieSelect.appendChild(opt);
+                opt.textContent = '▶ ' + m;
+                grpNow.appendChild(opt);
 
                 const dataOpt = document.createElement('option');
                 dataOpt.value = m;
                 moviesList.appendChild(dataOpt);
             });
+            movieSelect.appendChild(grpNow);
+
+            // Group 2: Upcoming
+            const grpUp = document.createElement('optgroup');
+            grpUp.label = '🚀 UPCOMING (Watch for Booking Open)';
+            UPCOMING_MOVIES.forEach(m => {
+                const opt = document.createElement('option');
+                opt.value = m;
+                opt.textContent = '⏳ ' + m;
+                grpUp.appendChild(opt);
+
+                // Add clean title to datalist for search
+                const clean = m.replace(/\s*\([^)]*\)\s*$/, '').trim();
+                const dataOpt = document.createElement('option');
+                dataOpt.value = clean;
+                moviesList.appendChild(dataOpt);
+            });
+            movieSelect.appendChild(grpUp);
         }
 
         function onMovieSelectChange(val) {
             if (val) {
-                document.getElementById('movie').value = val;
+                // Strip out trailing (Dates) like "(Dec 5)" for exact search
+                const clean = val.replace(/\s*\([^)]*\)\s*$/, '').trim();
+                document.getElementById('movie').value = clean;
             }
         }
 
