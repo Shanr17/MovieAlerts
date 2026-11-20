@@ -1,183 +1,191 @@
-# 🎬 Movie Ticket Alert System
+<div align="center">
 
-Get instant notifications when ticket bookings open for your movie at your theater!
+# 🎬 MovieAlerts
 
-## ✨ Features
+### Automated, High-Speed Movie Ticket Alert System for BookMyShow, PVR & District
 
-- 📱 **Multi-platform monitoring** — BookMyShow, PVR Cinemas, District (Swiggy)
-- 🔔 **Triple alert channels** — Telegram, Discord, Ntfy.sh
-- 🌐 **Web Dashboard** — Visual UI hosted on GitHub Pages
-- ☁️ **Runs free on GitHub Actions** — checks every 5 minutes
-- 🧠 **Smart dedup** — alerts you once per platform, no spam
-- 🔍 **Fuzzy matching** — handles slight name variations
+[![Monitor Status](https://github.com/Shanr17/MovieAlerts/actions/workflows/monitor.yml/badge.svg)](https://github.com/Shanr17/MovieAlerts/actions)
+![Python 3.12](https://img.shields.io/badge/Python-3.12-3776AB?logo=python&logoColor=white)
+![Checks](https://img.shields.io/badge/Frequency-Every%202.5%20Mins-E94560?style=flat)
+![Cost](https://img.shields.io/badge/Hosting-100%25%20Free-success)
+![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)
 
-## 🏗️ Architecture
+**Never miss first-day-first-show tickets again.**  
+MovieAlerts runs 24/7 in the cloud with zero servers to manage, polling ticketing engines every 2.5 minutes and delivering instant push notifications straight to your phone.
 
+[Quick Start](#-quick-start-in-3-steps) • [Supported Platforms](#-supported-platforms) • [Alert Channels](#-instant-alert-channels) • [Dashboard](#-web-dashboard) • [Configuration](#-configuration--secrets)
+
+</div>
+
+---
+
+## ⚡ Why MovieAlerts?
+
+Blockbuster movie bookings often sell out in minutes without any prior notice. Manual refreshing is frustrating and unreliable. 
+
+**MovieAlerts solves this by:**
+- ⏱️ **Checking every 2.5 minutes (150 seconds)** round-the-clock.
+- ☁️ **Running 100% serverless** on GitHub Actions with **unlimited free runtime**.
+- 🛡️ **Zero credit card or hosting fees required**.
+- 📲 **Pushing instant alerts with direct 1-click booking links** via Telegram, Discord, and Ntfy.sh.
+- 🎛️ **Featuring a built-in Web Dashboard** deployed directly on GitHub Pages.
+
+---
+
+## 🎯 Architecture & How It Works
+
+```mermaid
+flowchart TD
+    A[⏰ GitHub Actions Scheduler] -->|Every 2.5 mins| B[🐍 monitor.py Engine]
+    
+    subgraph Platforms["Ticketing Platforms Monitored"]
+        B --> C1[🎟️ BookMyShow]
+        B --> C2[🍿 PVR Cinemas]
+        B --> C3[🍕 District by Swiggy]
+    end
+    
+    C1 & C2 & C3 --> D{Bookings Open?}
+    
+    D -->|No| E[💤 Sleep & Wait Next Cycle]
+    D -->|Yes!| F[🚀 Instant Multi-Channel Broadcast]
+    
+    subgraph Notifications["Your Devices"]
+        F --> G1[📱 Telegram Push]
+        F --> G2[🎮 Discord Webhook]
+        F --> G3[📡 Ntfy Phone Notification]
+    end
 ```
-GitHub Actions (every 5 mins)
-         ↓
-  ┌──────────────────────┐
-  │   Booking Checkers   │
-  │  • BookMyShow        │
-  │  • PVR Cinemas       │
-  │  • District          │
-  └──────────┬───────────┘
-             ↓ Booking Detected!
-  ┌──────────────────────┐
-  │    Alert Channels    │
-  │  📱 Telegram Bot     │
-  │  🎮 Discord Webhook  │
-  │  📡 Ntfy.sh          │
-  └──────────────────────┘
+
+---
+
+## 🎟️ Supported Platforms
+
+| Platform | Coverage | Status | Method |
+|---|---|:---:|---|
+| **BookMyShow** | All major cities & local theaters across India | ✅ Active | Direct Explore & Showtimes API |
+| **PVR Cinemas** | PVR Multiplexes & INOX screens nationwide | ✅ Active | Real-time Cinema Schedule Engine |
+| **District (Swiggy)** | Major metro cinema chains & special premieres | ✅ Active | Fast Catalog & Venue Resolver |
+
+---
+
+## 🔔 Instant Alert Channels
+
+Choose one or enable all three simultaneously:
+
+| Channel | Setup Difficulty | Account Needed? | Features |
+|---|:---:|:---:|---|
+| **📡 Ntfy.sh** | **Super Easy (1 min)** | ❌ No | Install app, subscribe to topic, urgent push priority with 1-tap booking button |
+| **📱 Telegram Bot** | **Easy (2 mins)** | ✅ Yes | Formatted markdown alert, direct booking URL, detects show timings |
+| **🎮 Discord Webhook** | **Easy (2 mins)** | ✅ Yes | Rich colored embeds with showtime schedules and instant link |
+
+---
+
+## 🌐 Web Dashboard
+
+MovieAlerts includes a local and hosted web dashboard built right into the repository.
+
+* **Live URL:** `https://Shanr17.github.io/MovieAlerts/`
+* **Features:**
+  * Visual selector for major Indian cities (Mumbai, NCR, Bangalore, Chennai, Hyderabad, etc.).
+  * Fast input for target movie & theater.
+  * Checkbox toggles for platforms and alert channels.
+  * One-click trigger to initiate a check on-demand.
+  * Stored credentials remain strictly within your browser's private `localStorage`.
+
+---
+
+## 🚀 Quick Start in 3 Steps
+
+### 1. Add Secrets to Your Repository
+Navigate to your repository on GitHub:
+👉 **Settings** → **Secrets and variables** → **Actions** → **New repository secret**
+
+Add these essentials:
+```env
+MOVIE_NAME      = Pushpa 2
+THEATER_NAME    = PVR Phoenix MarketCity
+CITY            = chennai
 ```
 
-## 🚀 Setup Guide
+### 2. Connect Your Alert Method
+Add the secrets for whichever alert service you prefer:
 
-### Step 1: Create GitHub Repository
+#### Option A: Ntfy (Fastest — No account or tokens needed!)
+1. Install **ntfy** on Android or iOS.
+2. Subscribe to any private topic (e.g. `shan-movie-tickets-2026`).
+3. Add these GitHub secrets:
+   * `NTFY_TOPIC`: `shan-movie-tickets-2026`
+   * `NTFY_ENABLED`: `true`
 
-1. Create a new **private** repo on GitHub (e.g., `movie-alert`)
-2. Push all these files to it:
-   ```bash
-   cd TicketAlert
-   git init
-   git add .
-   git commit -m "Initial setup"
-   git branch -M main
-   git remote add origin https://github.com/YOUR_USERNAME/movie-alert.git
-   git push -u origin main
-   ```
+#### Option B: Telegram
+1. Message `@BotFather` on Telegram, create a bot, and copy the **Bot Token**.
+2. Message `@userinfobot` to get your numerical **Chat ID**.
+3. Add these GitHub secrets:
+   * `TELEGRAM_BOT_TOKEN`: `your-bot-token`
+   * `TELEGRAM_CHAT_ID`: `your-chat-id`
+   * `TELEGRAM_ENABLED`: `true`
 
-### Step 2: Set Up Alert Channels
+#### Option C: Discord
+1. In Discord server channel settings → **Integrations** → **Webhooks** → **New Webhook**.
+2. Copy the Webhook URL and add secret:
+   * `DISCORD_WEBHOOK_URL`: `https://discord.com/api/webhooks/...`
+   * `DISCORD_ENABLED`: `true`
 
-#### 📱 Telegram Bot
-1. Open Telegram, message [@BotFather](https://t.me/BotFather)
-2. Send `/newbot`, follow prompts, copy the **Bot Token**
-3. Message [@userinfobot](https://t.me/userinfobot) to get your **Chat ID**
-4. Message your new bot (send `/start`) so it can send you messages
+### 3. Verify It Running
+1. Go to the **Actions** tab on your repository.
+2. Select **Movie Ticket Monitor**.
+3. Click **Run workflow** to test it right now! It will also automatically trigger every 2.5 minutes.
 
-#### 🎮 Discord Webhook
-1. Open your Discord server → **Server Settings** → **Integrations**
-2. Click **Webhooks** → **New Webhook**
-3. Name it "Movie Alert", choose a channel
-4. Click **Copy Webhook URL**
+---
 
-#### 📡 Ntfy.sh
-1. Install the [ntfy app](https://ntfy.sh/) on your phone
-2. Subscribe to a topic name (e.g., `my-movie-alerts-123`)
-3. That's it! No account needed
+## 🔐 Configuration & Secrets Reference
 
-### Step 3: Add GitHub Secrets
+All parameters can be configured via GitHub Secrets (for cloud automation) or `config.json` (for local runs):
 
-Go to your repo → **Settings** → **Secrets and variables** → **Actions** → **New repository secret**
-
-Add these secrets:
-
-| Secret Name | Value | Required |
+| Secret / Config Key | Description | Example |
 |---|---|---|
-| `MOVIE_NAME` | Your movie name (e.g., `Pushpa 2`) | ✅ |
-| `THEATER_NAME` | Theater name (e.g., `PVR Phoenix`) | ✅ |
-| `CITY` | City name (e.g., `chennai`) | ✅ |
-| `CITY_CODE` | BMS city code (e.g., `CHEN`) | Optional |
-| `TELEGRAM_BOT_TOKEN` | Bot token from BotFather | If using Telegram |
-| `TELEGRAM_CHAT_ID` | Your chat ID | If using Telegram |
-| `TELEGRAM_ENABLED` | `true` | If using Telegram |
-| `DISCORD_WEBHOOK_URL` | Discord webhook URL | If using Discord |
-| `DISCORD_ENABLED` | `true` | If using Discord |
-| `NTFY_TOPIC` | Your ntfy topic name | If using Ntfy |
-| `NTFY_ENABLED` | `true` | If using Ntfy |
+| `MOVIE_NAME` | Name of the movie to detect | `Avatar 3` |
+| `THEATER_NAME` | Name of the theater / cinema hall | `SPI Palazzo` |
+| `CITY` | City name (case-insensitive) | `chennai`, `bangalore`, `mumbai` |
+| `CITY_CODE` | Optional BMS city code override | `CHEN`, `BANG`, `MUMBAI` |
+| `CHECK_BMS` | Check BookMyShow (`true` / `false`) | `true` |
+| `CHECK_PVR` | Check PVR Cinemas (`true` / `false`) | `true` |
+| `CHECK_DISTRICT` | Check District (`true` / `false`) | `true` |
+| `CHECK_NEXT_DAYS` | How many days ahead to scan (default 7) | `7` |
 
-### Step 4: Enable GitHub Pages (for Dashboard)
+---
 
-1. Go to repo → **Settings** → **Pages**
-2. Source: **Deploy from a branch**
-3. Branch: `main`, folder: `/ (root)`
-4. Your dashboard will be at: `https://YOUR_USERNAME.github.io/movie-alert/`
+## 💻 Running Locally on Windows / Mac / Linux
 
-### Step 5: Enable GitHub Actions
-
-1. Go to repo → **Actions** tab
-2. Click **"I understand my workflows, go ahead and enable them"**
-3. The monitor will start running every 5 minutes automatically!
-
-## 📊 BMS City Codes
-
-| City | Code | City | Code |
-|---|---|---|---|
-| Mumbai | MUMBAI | Kolkata | KOLK |
-| Delhi NCR | NCR | Pune | PUNE |
-| Bangalore | BANG | Ahmedabad | AHMD |
-| Chennai | CHEN | Kochi | KOCH |
-| Hyderabad | HYD | Jaipur | JAIP |
-
-## 🔧 Configuration
-
-### Via Web Dashboard
-Open your GitHub Pages URL and configure visually.
-
-### Via config.json
-Edit `config.json` directly:
-```json
-{
-  "city": "chennai",
-  "city_code": "CHEN",
-  "movie": "Pushpa 2",
-  "theater": "PVR Phoenix",
-  "platforms": {
-    "bms": true,
-    "pvr": true,
-    "district": true
-  },
-  "alerts": {
-    "telegram": { "enabled": true, "bot_token": "...", "chat_id": "..." },
-    "discord": { "enabled": true, "webhook_url": "..." },
-    "ntfy": { "enabled": true, "topic": "my-alerts", "server": "https://ntfy.sh" }
-  },
-  "check_next_days": 7,
-  "active": true
-}
-```
-
-### Via Environment Variables / GitHub Secrets
-All config values can be overridden with environment variables (see table above).
-
-## 🧪 Local Testing
+If you prefer to run the monitor on your own computer or phone:
 
 ```bash
+# Clone the repository
+git clone https://github.com/Shanr17/MovieAlerts.git
+cd MovieAlerts
+
+# Install dependencies
 pip install -r requirements.txt
-python monitor.py
+
+# Run continuous 2.5-minute loop
+python monitor.py --loop --interval 150
 ```
 
-## 📁 Project Structure
+On Windows, you can also simply double-click **`run_local_2min.bat`** to start monitoring immediately.
 
-```
-TicketAlert/
-├── index.html                  # Web dashboard (GitHub Pages)
-├── config.json                 # Configuration
-├── state.json                  # Alert state tracking
-├── monitor.py                  # Main orchestrator
-├── requirements.txt            # Python dependencies
-├── checkers/
-│   ├── __init__.py
-│   ├── bms.py                  # BookMyShow checker
-│   ├── pvr.py                  # PVR Cinemas checker
-│   └── district.py             # District (Swiggy) checker
-├── notifiers/
-│   ├── __init__.py
-│   ├── telegram.py             # Telegram notifier
-│   ├── discord.py              # Discord notifier
-│   └── ntfy.py                 # Ntfy.sh notifier
-├── .github/
-│   └── workflows/
-│       └── monitor.yml         # GitHub Actions workflow
-└── README.md
-```
+---
 
-## ⚠️ Important Notes
+## 🛡️ Privacy & Security
 
-1. **GitHub Actions free tier** gives 2,000 minutes/month — checking every 5 mins uses ~8,640 mins/month. Consider checking every 10-15 mins to stay in free tier, or use a paid plan.
-2. **BMS/PVR/District APIs** are internal/unofficial and may change. If a checker stops working, the error will be logged and other platforms will still be checked.
-3. **State tracking** prevents duplicate alerts. Delete `state.json` contents to re-trigger alerts.
+- **Repository is Public, but Secrets are Private:** Sensitive keys (Bot tokens, webhook URLs) are stored in encrypted GitHub Repository Secrets. They are never exposed in logs or visible to repository visitors.
+- **Smart De-duplication:** State is saved in `state.json` to ensure you receive a notification once when tickets drop—without repetitive spam.
 
-## 📄 License
+---
 
-MIT — Use it however you like!
+<div align="center">
+
+Made for movie lovers who value first-day-first-show seats 🍿
+
+⭐ **Found this useful? Star this repo to show support!**
+
+</div>
