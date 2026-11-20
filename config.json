@@ -1,0 +1,29 @@
+{
+  "city": "",
+  "city_code": "",
+  "movie": "",
+  "theater": "",
+  "platforms": {
+    "bms": true,
+    "pvr": true,
+    "district": true
+  },
+  "alerts": {
+    "telegram": {
+      "enabled": false,
+      "bot_token": "",
+      "chat_id": ""
+    },
+    "discord": {
+      "enabled": false,
+      "webhook_url": ""
+    },
+    "ntfy": {
+      "enabled": false,
+      "topic": "movie-alerts",
+      "server": "https://ntfy.sh"
+    }
+  },
+  "check_next_days": 7,
+  "active": false
+}

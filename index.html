@@ -1,0 +1,694 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>🎬 Movie Ticket Alert</title>
+    <style>
+        :root {
+            --bg: #0f0f1a;
+            --surface: #1a1a2e;
+            --surface2: #222240;
+            --accent: #e94560;
+            --accent2: #0f3460;
+            --text: #eee;
+            --text-dim: #888;
+            --success: #00c853;
+            --warning: #ff9800;
+            --border: #333355;
+            --radius: 12px;
+        }
+
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: var(--bg);
+            color: var(--text);
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 700px;
+            margin: 0 auto;
+        }
+
+        .header {
+            text-align: center;
+            padding: 30px 0;
+        }
+
+        .header h1 {
+            font-size: 2em;
+            margin-bottom: 8px;
+            background: linear-gradient(135deg, var(--accent), #ff6b6b);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        .header p {
+            color: var(--text-dim);
+            font-size: 0.95em;
+        }
+
+        .card {
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: var(--radius);
+            padding: 24px;
+            margin-bottom: 20px;
+        }
+
+        .card h2 {
+            font-size: 1.1em;
+            margin-bottom: 16px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .card h2 .icon { font-size: 1.3em; }
+
+        label {
+            display: block;
+            font-size: 0.85em;
+            color: var(--text-dim);
+            margin-bottom: 6px;
+            margin-top: 14px;
+        }
+
+        label:first-of-type { margin-top: 0; }
+
+        input, select {
+            width: 100%;
+            padding: 12px 14px;
+            background: var(--surface2);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            color: var(--text);
+            font-size: 0.95em;
+            outline: none;
+            transition: border-color 0.2s;
+        }
+
+        input:focus, select:focus {
+            border-color: var(--accent);
+        }
+
+        input::placeholder { color: #555; }
+
+        .checkbox-group {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+            margin-top: 8px;
+        }
+
+        .checkbox-item {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            padding: 10px 16px;
+            background: var(--surface2);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.2s;
+            flex: 1;
+            min-width: 140px;
+        }
+
+        .checkbox-item:hover { border-color: var(--accent); }
+
+        .checkbox-item input[type="checkbox"] {
+            width: 18px;
+            height: 18px;
+            accent-color: var(--accent);
+        }
+
+        .checkbox-item.checked {
+            border-color: var(--accent);
+            background: rgba(233, 69, 96, 0.1);
+        }
+
+        .alert-config {
+            margin-top: 10px;
+            padding: 14px;
+            background: var(--surface2);
+            border-radius: 8px;
+            border: 1px solid var(--border);
+            display: none;
+        }
+
+        .alert-config.visible { display: block; }
+
+        .alert-config label { margin-top: 10px; }
+        .alert-config label:first-child { margin-top: 0; }
+
+        .alert-config input {
+            font-size: 0.85em;
+            padding: 10px 12px;
+        }
+
+        .btn {
+            width: 100%;
+            padding: 14px;
+            border: none;
+            border-radius: 8px;
+            font-size: 1em;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s;
+            margin-top: 10px;
+        }
+
+        .btn-primary {
+            background: linear-gradient(135deg, var(--accent), #c0392b);
+            color: white;
+        }
+
+        .btn-primary:hover { transform: translateY(-1px); box-shadow: 0 4px 15px rgba(233,69,96,0.4); }
+        .btn-primary:disabled { opacity: 0.5; cursor: not-allowed; transform: none; box-shadow: none; }
+
+        .btn-secondary {
+            background: var(--surface2);
+            color: var(--text);
+            border: 1px solid var(--border);
+        }
+
+        .btn-secondary:hover { border-color: var(--accent); }
+
+        .status {
+            margin-top: 16px;
+            padding: 14px;
+            border-radius: 8px;
+            font-size: 0.9em;
+            display: none;
+        }
+
+        .status.success {
+            display: block;
+            background: rgba(0, 200, 83, 0.1);
+            border: 1px solid rgba(0, 200, 83, 0.3);
+            color: var(--success);
+        }
+
+        .status.error {
+            display: block;
+            background: rgba(233, 69, 96, 0.1);
+            border: 1px solid rgba(233, 69, 96, 0.3);
+            color: var(--accent);
+        }
+
+        .status.info {
+            display: block;
+            background: rgba(15, 52, 96, 0.3);
+            border: 1px solid rgba(15, 52, 96, 0.5);
+            color: #64b5f6;
+        }
+
+        .setup-step {
+            display: flex;
+            gap: 12px;
+            align-items: flex-start;
+            margin-top: 12px;
+            padding: 12px;
+            background: var(--surface2);
+            border-radius: 8px;
+        }
+
+        .step-num {
+            background: var(--accent);
+            color: white;
+            width: 24px;
+            height: 24px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 0.75em;
+            font-weight: 700;
+            flex-shrink: 0;
+        }
+
+        .step-text { font-size: 0.85em; line-height: 1.5; }
+        .step-text code {
+            background: var(--bg);
+            padding: 2px 6px;
+            border-radius: 4px;
+            font-size: 0.9em;
+        }
+
+        .footer {
+            text-align: center;
+            padding: 20px;
+            color: var(--text-dim);
+            font-size: 0.8em;
+        }
+
+        .row { display: flex; gap: 12px; }
+        .row > * { flex: 1; }
+
+        @media (max-width: 600px) {
+            .row { flex-direction: column; }
+            .checkbox-item { min-width: 100%; }
+        }
+
+        .loading { opacity: 0.6; pointer-events: none; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <!-- Header -->
+        <div class="header">
+            <h1>🎬 Movie Ticket Alert</h1>
+            <p>Get notified instantly when bookings open</p>
+        </div>
+
+        <!-- GitHub Setup -->
+        <div class="card" id="github-card">
+            <h2><span class="icon">⚙️</span> GitHub Connection</h2>
+            <label>GitHub Personal Access Token</label>
+            <input type="password" id="gh-token" placeholder="ghp_xxxxxxxxxxxx"
+                   oninput="saveLocal()">
+            <label>Repository (owner/repo)</label>
+            <input type="text" id="gh-repo" placeholder="yourusername/movie-alert"
+                   oninput="saveLocal()">
+            <div class="status info" id="gh-info" style="display:block; margin-top:12px;">
+                ℹ️ Your token is stored only in your browser's localStorage. Never shared.
+            </div>
+        </div>
+
+        <!-- Movie & Theater Selection -->
+        <div class="card">
+            <h2><span class="icon">🎥</span> Movie & Theater</h2>
+
+            <label>City</label>
+            <select id="city" onchange="onCityChange()">
+                <option value="">Select your city...</option>
+                <option value="mumbai|MUMBAI">Mumbai</option>
+                <option value="delhi-ncr|NCR">Delhi NCR</option>
+                <option value="bangalore|BANG">Bangalore</option>
+                <option value="chennai|CHEN">Chennai</option>
+                <option value="hyderabad|HYD">Hyderabad</option>
+                <option value="kolkata|KOLK">Kolkata</option>
+                <option value="pune|PUNE">Pune</option>
+                <option value="ahmedabad|AHMD">Ahmedabad</option>
+                <option value="kochi|KOCH">Kochi</option>
+                <option value="jaipur|JAIP">Jaipur</option>
+                <option value="lucknow|LUCK">Lucknow</option>
+                <option value="chandigarh|CHAND">Chandigarh</option>
+                <option value="indore|INDO">Indore</option>
+                <option value="coimbatore|COIM">Coimbatore</option>
+                <option value="thiruvananthapuram|TRIV">Thiruvananthapuram</option>
+                <option value="vizag|VIZAG">Visakhapatnam</option>
+                <option value="nagpur|NAGP">Nagpur</option>
+                <option value="bhopal|BHOP">Bhopal</option>
+                <option value="goa|GOA">Goa</option>
+                <option value="vadodara|VADO">Vadodara</option>
+                <option value="surat|SURA">Surat</option>
+                <option value="guwahati|GUWA">Guwahati</option>
+                <option value="mysore|MYSO">Mysore</option>
+                <option value="madurai|MADU">Madurai</option>
+                <option value="trichy|TRIC">Tiruchirappalli</option>
+                <option value="patna|PATN">Patna</option>
+            </select>
+
+            <label>Movie Name</label>
+            <input type="text" id="movie" placeholder="e.g., Pushpa 2">
+
+            <label>Theater Name</label>
+            <input type="text" id="theater" placeholder="e.g., PVR Phoenix MarketCity">
+
+            <label>Check next N days</label>
+            <input type="number" id="check-days" value="7" min="1" max="30">
+        </div>
+
+        <!-- Platforms -->
+        <div class="card">
+            <h2><span class="icon">📱</span> Booking Platforms</h2>
+            <div class="checkbox-group">
+                <label class="checkbox-item checked">
+                    <input type="checkbox" id="plt-bms" checked onchange="toggleCheck(this)">
+                    BookMyShow
+                </label>
+                <label class="checkbox-item checked">
+                    <input type="checkbox" id="plt-pvr" checked onchange="toggleCheck(this)">
+                    PVR Cinemas
+                </label>
+                <label class="checkbox-item checked">
+                    <input type="checkbox" id="plt-district" checked onchange="toggleCheck(this)">
+                    District
+                </label>
+            </div>
+        </div>
+
+        <!-- Alert Channels -->
+        <div class="card">
+            <h2><span class="icon">🔔</span> Alert Channels</h2>
+
+            <!-- Telegram -->
+            <div class="checkbox-group" style="margin-bottom:8px;">
+                <label class="checkbox-item">
+                    <input type="checkbox" id="alert-telegram" onchange="toggleAlert('telegram', this)">
+                    📱 Telegram
+                </label>
+            </div>
+            <div class="alert-config" id="config-telegram">
+                <label>Bot Token</label>
+                <input type="password" id="tg-token" placeholder="123456:ABC-DEF...">
+                <label>Chat ID</label>
+                <input type="text" id="tg-chatid" placeholder="Your chat ID number">
+                <div class="setup-step">
+                    <div class="step-num">?</div>
+                    <div class="step-text">
+                        Message <code>@BotFather</code> on Telegram → <code>/newbot</code> → copy token.<br>
+                        Message <code>@userinfobot</code> → get your Chat ID.
+                    </div>
+                </div>
+            </div>
+
+            <!-- Discord -->
+            <div class="checkbox-group" style="margin-bottom:8px; margin-top:12px;">
+                <label class="checkbox-item">
+                    <input type="checkbox" id="alert-discord" onchange="toggleAlert('discord', this)">
+                    🎮 Discord
+                </label>
+            </div>
+            <div class="alert-config" id="config-discord">
+                <label>Webhook URL</label>
+                <input type="text" id="dc-webhook" placeholder="https://discord.com/api/webhooks/...">
+                <div class="setup-step">
+                    <div class="step-num">?</div>
+                    <div class="step-text">
+                        Server Settings → Integrations → Webhooks → New Webhook → Copy URL
+                    </div>
+                </div>
+            </div>
+
+            <!-- Ntfy -->
+            <div class="checkbox-group" style="margin-bottom:8px; margin-top:12px;">
+                <label class="checkbox-item">
+                    <input type="checkbox" id="alert-ntfy" onchange="toggleAlert('ntfy', this)">
+                    📡 Ntfy.sh
+                </label>
+            </div>
+            <div class="alert-config" id="config-ntfy">
+                <label>Topic Name</label>
+                <input type="text" id="ntfy-topic" placeholder="my-movie-alerts (pick a unique name)">
+                <div class="setup-step">
+                    <div class="step-num">?</div>
+                    <div class="step-text">
+                        Install <a href="https://ntfy.sh" style="color:var(--accent)">ntfy app</a> →
+                        Subscribe to your topic name. No account needed!
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Actions -->
+        <div class="card">
+            <h2><span class="icon">🚀</span> Control</h2>
+            <button class="btn btn-primary" onclick="saveAndDeploy()">
+                💾 Save Config & Start Monitoring
+            </button>
+            <button class="btn btn-secondary" onclick="triggerManualCheck()" style="margin-top:10px;">
+                ▶️ Run Check Now
+            </button>
+            <button class="btn btn-secondary" onclick="stopMonitoring()" style="margin-top:10px;">
+                ⏹️ Stop Monitoring
+            </button>
+            <div class="status" id="action-status"></div>
+        </div>
+
+        <!-- Status -->
+        <div class="card" id="last-status-card" style="display:none;">
+            <h2><span class="icon">📊</span> Last Check Status</h2>
+            <div id="last-status-content"></div>
+        </div>
+
+        <div class="footer">
+            🎬 Movie Ticket Alert System &middot; Runs on GitHub Actions (free) &middot; Checks every 2.5 minutes
+        </div>
+    </div>
+
+    <script>
+        // === Local Storage ===
+        function saveLocal() {
+            localStorage.setItem('gh-token', document.getElementById('gh-token').value);
+            localStorage.setItem('gh-repo', document.getElementById('gh-repo').value);
+        }
+
+        function loadLocal() {
+            const token = localStorage.getItem('gh-token') || '';
+            const repo = localStorage.getItem('gh-repo') || '';
+            document.getElementById('gh-token').value = token;
+            document.getElementById('gh-repo').value = repo;
+        }
+
+        // === UI Helpers ===
+        function toggleCheck(el) {
+            el.closest('.checkbox-item').classList.toggle('checked', el.checked);
+        }
+
+        function toggleAlert(type, el) {
+            const config = document.getElementById(`config-${type}`);
+            config.classList.toggle('visible', el.checked);
+            el.closest('.checkbox-item').classList.toggle('checked', el.checked);
+        }
+
+        function onCityChange() {
+            // Can be extended to auto-populate theaters
+        }
+
+        function showStatus(type, message) {
+            const el = document.getElementById('action-status');
+            el.className = `status ${type}`;
+            el.textContent = message;
+            el.style.display = 'block';
+        }
+
+        // === GitHub API ===
+        function getGitHub() {
+            const token = document.getElementById('gh-token').value.trim();
+            const repo = document.getElementById('gh-repo').value.trim();
+            if (!token || !repo) {
+                showStatus('error', '❌ Please enter GitHub token and repository');
+                return null;
+            }
+            return { token, repo };
+        }
+
+        async function githubAPI(method, path, body = null) {
+            const gh = getGitHub();
+            if (!gh) return null;
+
+            const opts = {
+                method,
+                headers: {
+                    'Authorization': `Bearer ${gh.token}`,
+                    'Accept': 'application/vnd.github.v3+json',
+                    'Content-Type': 'application/json',
+                },
+            };
+            if (body) opts.body = JSON.stringify(body);
+
+            const resp = await fetch(`https://api.github.com/repos/${gh.repo}${path}`, opts);
+            if (!resp.ok) {
+                const err = await resp.json().catch(() => ({}));
+                throw new Error(err.message || `HTTP ${resp.status}`);
+            }
+            return resp.status === 204 ? null : resp.json();
+        }
+
+        // === Build Config ===
+        function buildConfig() {
+            const cityVal = document.getElementById('city').value;
+            const [city, cityCode] = cityVal ? cityVal.split('|') : ['', ''];
+
+            return {
+                city: city,
+                city_code: cityCode,
+                movie: document.getElementById('movie').value.trim(),
+                theater: document.getElementById('theater').value.trim(),
+                platforms: {
+                    bms: document.getElementById('plt-bms').checked,
+                    pvr: document.getElementById('plt-pvr').checked,
+                    district: document.getElementById('plt-district').checked,
+                },
+                alerts: {
+                    telegram: {
+                        enabled: document.getElementById('alert-telegram').checked,
+                        bot_token: document.getElementById('tg-token').value.trim(),
+                        chat_id: document.getElementById('tg-chatid').value.trim(),
+                    },
+                    discord: {
+                        enabled: document.getElementById('alert-discord').checked,
+                        webhook_url: document.getElementById('dc-webhook').value.trim(),
+                    },
+                    ntfy: {
+                        enabled: document.getElementById('alert-ntfy').checked,
+                        topic: document.getElementById('ntfy-topic').value.trim(),
+                        server: 'https://ntfy.sh',
+                    },
+                },
+                check_next_days: parseInt(document.getElementById('check-days').value) || 7,
+                active: true,
+            };
+        }
+
+        // === Actions ===
+        async function saveAndDeploy() {
+            const config = buildConfig();
+
+            if (!config.movie || !config.theater || !config.city) {
+                showStatus('error', '❌ Please fill in city, movie name, and theater name');
+                return;
+            }
+
+            const gh = getGitHub();
+            if (!gh) return;
+
+            showStatus('info', '⏳ Saving config to GitHub...');
+
+            try {
+                // Update config.json in repo
+                const content = btoa(unescape(encodeURIComponent(JSON.stringify(config, null, 2))));
+
+                // Get current file SHA (if exists)
+                let sha = '';
+                try {
+                    const existing = await githubAPI('GET', '/contents/config.json');
+                    sha = existing.sha;
+                } catch (e) {
+                    // File doesn't exist yet, that's fine
+                }
+
+                const body = {
+                    message: `🎬 Update config: ${config.movie} at ${config.theater}`,
+                    content: content,
+                };
+                if (sha) body.sha = sha;
+
+                await githubAPI('PUT', '/contents/config.json', body);
+
+                // Also save secrets (non-sensitive config)
+                // Note: GitHub Secrets API requires different permissions
+                // For now, we store alert tokens as GitHub Secrets manually
+
+                showStatus('success',
+                    `✅ Config saved! Monitoring "${config.movie}" at "${config.theater}". ` +
+                    `GitHub Actions will check every 5 minutes.`
+                );
+
+                // Remind about secrets
+                if (config.alerts.telegram.enabled || config.alerts.discord.enabled) {
+                    setTimeout(() => {
+                        showStatus('info',
+                            '⚠️ Remember to add alert tokens as GitHub Secrets ' +
+                            '(Settings → Secrets → Actions). See README for details.'
+                        );
+                    }, 3000);
+                }
+
+            } catch (e) {
+                showStatus('error', `❌ Failed to save: ${e.message}`);
+            }
+        }
+
+        async function triggerManualCheck() {
+            const gh = getGitHub();
+            if (!gh) return;
+
+            showStatus('info', '⏳ Triggering manual check...');
+
+            try {
+                await githubAPI('POST', '/actions/workflows/monitor.yml/dispatches', {
+                    ref: 'main',
+                    inputs: { force_check: 'true' },
+                });
+                showStatus('success', '✅ Manual check triggered! Check GitHub Actions for results.');
+            } catch (e) {
+                showStatus('error', `❌ Failed to trigger: ${e.message}`);
+            }
+        }
+
+        async function stopMonitoring() {
+            const gh = getGitHub();
+            if (!gh) return;
+
+            showStatus('info', '⏳ Stopping monitor...');
+
+            try {
+                // Update config to set active: false
+                let existing, sha = '';
+                try {
+                    existing = await githubAPI('GET', '/contents/config.json');
+                    sha = existing.sha;
+                    const currentConfig = JSON.parse(decodeURIComponent(escape(atob(existing.content.replace(/\n/g, '')))));
+                    currentConfig.active = false;
+
+                    const content = btoa(unescape(encodeURIComponent(JSON.stringify(currentConfig, null, 2))));
+                    await githubAPI('PUT', '/contents/config.json', {
+                        message: '⏸️ Pause monitoring',
+                        content: content,
+                        sha: sha,
+                    });
+                } catch (e) {
+                    throw new Error('Could not update config: ' + e.message);
+                }
+
+                showStatus('success', '⏹️ Monitoring paused. Click "Save & Start" to resume.');
+            } catch (e) {
+                showStatus('error', `❌ Failed to stop: ${e.message}`);
+            }
+        }
+
+        async function loadLastStatus() {
+            const gh = getGitHub();
+            if (!gh) return;
+
+            try {
+                const stateFile = await githubAPI('GET', '/contents/state.json');
+                const state = JSON.parse(decodeURIComponent(escape(atob(stateFile.content.replace(/\n/g, '')))));
+
+                if (state.last_check) {
+                    const card = document.getElementById('last-status-card');
+                    const content = document.getElementById('last-status-content');
+                    card.style.display = 'block';
+
+                    let html = `<p style="color:var(--text-dim);">Last check: ${new Date(state.last_check).toLocaleString()}</p>`;
+
+                    if (Object.keys(state.alerted || {}).length > 0) {
+                        html += '<div style="margin-top:10px; padding:12px; background:rgba(0,200,83,0.1); border-radius:8px;">';
+                        html += '<strong style="color:var(--success);">🎉 Bookings Found!</strong><br>';
+                        for (const [key, info] of Object.entries(state.alerted)) {
+                            html += `<p style="margin-top:6px;">${info.platform} — alerted at ${new Date(info.timestamp).toLocaleString()}</p>`;
+                            if (info.booking_url) {
+                                html += `<a href="${info.booking_url}" target="_blank" style="color:var(--accent);">🔗 Book Now</a>`;
+                            }
+                        }
+                        html += '</div>';
+                    } else {
+                        html += '<p style="margin-top:8px;">📭 No bookings found yet. Monitoring continues...</p>';
+                    }
+
+                    content.innerHTML = html;
+                }
+            } catch (e) {
+                // State file not found or not accessible — that's okay
+            }
+        }
+
+        // === Init ===
+        window.addEventListener('load', () => {
+            loadLocal();
+            // Try to load last status if GitHub is configured
+            if (document.getElementById('gh-token').value && document.getElementById('gh-repo').value) {
+                loadLastStatus();
+            }
+        });
+    </script>
+</body>
+</html>

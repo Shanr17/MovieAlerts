@@ -1,0 +1,66 @@
+name: Movie Ticket Monitor
+
+on:
+  schedule:
+    # Runs every 5 minutes
+    - cron: '*/5 * * * *'
+  workflow_dispatch:
+    # Allow manual trigger from GitHub UI / dashboard
+    inputs:
+      force_check:
+        description: 'Force check even if already alerted'
+        required: false
+        default: 'false'
+        type: boolean
+
+env:
+  # Movie & Theater config (override config.json)
+  MOVIE_NAME: ${{ secrets.MOVIE_NAME }}
+  THEATER_NAME: ${{ secrets.THEATER_NAME }}
+  CITY: ${{ secrets.CITY }}
+  CITY_CODE: ${{ secrets.CITY_CODE }}
+
+  # Platform toggles
+  CHECK_BMS: 'true'
+  CHECK_PVR: 'true'
+  CHECK_DISTRICT: 'true'
+
+  # Alert credentials (from GitHub Secrets)
+  TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+  TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
+  TELEGRAM_ENABLED: ${{ secrets.TELEGRAM_ENABLED }}
+  DISCORD_WEBHOOK_URL: ${{ secrets.DISCORD_WEBHOOK_URL }}
+  DISCORD_ENABLED: ${{ secrets.DISCORD_ENABLED }}
+  NTFY_TOPIC: ${{ secrets.NTFY_TOPIC }}
+  NTFY_ENABLED: ${{ secrets.NTFY_ENABLED }}
+
+  ACTIVE: 'true'
+
+jobs:
+  check-bookings:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Install dependencies
+        run: pip install -r requirements.txt
+
+      - name: Run monitor (checks twice with 2.5 min interval)
+        run: python monitor.py --iterations 2 --interval 150
+
+      - name: Commit state changes
+        run: |
+          git config user.name "Movie Alert Bot"
+          git config user.email "movie-alert-bot@users.noreply.github.com"
+          git add state.json
+          git diff --cached --quiet || git commit -m "🎬 Update alert state [$(date -u '+%Y-%m-%d %H:%M UTC')]"
+          git push
