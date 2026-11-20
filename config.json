@@ -1,9 +1,9 @@
 {
-  "city": "",
-  "city_code": "",
-  "movie": "",
-  "theater": "",
-  "target_date": "",
+  "city": "pondicherry",
+  "city_code": "POND",
+  "movie": "DUNE PART THREE",
+  "theater": "PVR Providence Mall",
+  "target_date": "2026-12-18",
   "platforms": {
     "bms": true,
     "pvr": true,
@@ -11,20 +11,20 @@
   },
   "alerts": {
     "telegram": {
-      "enabled": false,
-      "bot_token": "",
-      "chat_id": ""
+      "enabled": true,
+      "bot_token": "9094844812:AAEsiJweCGuunaM7ilsZy_DrCxeDlqTkLuE",
+      "chat_id": "1797570807"
     },
     "discord": {
       "enabled": false,
       "webhook_url": ""
     },
     "ntfy": {
-      "enabled": false,
-      "topic": "movie-alerts",
+      "enabled": true,
+      "topic": "MovieAlerts",
       "server": "https://ntfy.sh"
     }
   },
-  "check_next_days": 7,
-  "active": false
+  "check_next_days": 30,
+  "active": true
 }
