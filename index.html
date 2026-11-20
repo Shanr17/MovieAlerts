@@ -357,23 +357,8 @@
                 <input type="text" id="custom-city" placeholder="e.g. Pondicherry, Salem, Hosur, etc.">
             </div>
 
-            <div style="display:flex; justify-content:space-between; align-items:center; margin-top:14px; margin-bottom:6px;">
-                <label style="margin:0;">Movie Name</label>
-                <button type="button" class="btn btn-secondary" id="btn-refresh-movies" style="width:auto; padding:4px 10px; font-size:0.75em; margin:0;" onclick="refreshLiveMovies()">
-                    🔄 Live Sync Movies
-                </button>
-            </div>
-            <div style="display:flex; flex-direction:column; gap:8px;">
-                <select id="movie-select" onchange="onMovieSelectChange(this.value)">
-                    <option value="">-- Choose Live Movie or Type Below --</option>
-                </select>
-                <input type="text" id="movie" list="movies-list" placeholder="Or type movie name manually...">
-                <datalist id="movies-list"></datalist>
-                <div id="movie-live-badge" style="font-size:0.75em; color:var(--text-dim); display:flex; align-items:center; gap:6px;">
-                    <span style="display:inline-block; width:8px; height:8px; border-radius:50%; background:var(--success);"></span>
-                    <span id="movie-live-text">Live movie database synced</span>
-                </div>
-            </div>
+            <label>Movie Name</label>
+            <input type="text" id="movie" placeholder="Type movie name (e.g. your movie)...">
 
             <label style="margin-top:16px;">Theater Name</label>
             <div style="display:flex; flex-direction:column; gap:8px;">
@@ -384,7 +369,18 @@
                 <datalist id="theaters-list"></datalist>
             </div>
 
-            <label>Check next N days</label>
+            <label style="margin-top:16px;">Target Booking Date (Optional)</label>
+            <div style="display:flex; gap:10px; align-items:center;">
+                <input type="date" id="target-date" style="flex:1;">
+                <button type="button" class="btn btn-secondary" onclick="document.getElementById('target-date').value=''" style="width:auto; padding:12px 14px; font-size:0.85em; margin:0; white-space:nowrap;">
+                    Clear / Any Date
+                </button>
+            </div>
+            <small style="color:var(--text-dim); font-size:0.8em; margin-top:4px; display:block;">
+                🎯 <strong>Target Date Filter:</strong> If a movie is already open up to 22/11, select <strong>23/11</strong> here. You will <em>only</em> be alerted when bookings open for that specific date!
+            </small>
+
+            <label style="margin-top:16px;">Check next N days (if no target date set)</label>
             <input type="number" id="check-days" value="7" min="1" max="30">
         </div>
 
@@ -927,6 +923,7 @@
                 city_code: cityCode,
                 movie: document.getElementById('movie').value.trim(),
                 theater: document.getElementById('theater').value.trim(),
+                target_date: document.getElementById('target-date').value.trim(),
                 platforms: {
                     bms: document.getElementById('plt-bms').checked,
                     pvr: document.getElementById('plt-pvr').checked,

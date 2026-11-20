@@ -63,6 +63,7 @@ def load_config() -> dict:
         "CHECK_PVR": ("platforms", "pvr"),
         "CHECK_DISTRICT": ("platforms", "district"),
         "CHECK_NEXT_DAYS": "check_next_days",
+        "TARGET_DATE": "target_date",
         "ACTIVE": "active",
     }
 
@@ -101,9 +102,9 @@ def save_state(state: dict):
         json.dump(state, f, indent=2)
 
 
-def _make_alert_key(platform: str, movie: str, theater: str) -> str:
+def _make_alert_key(platform: str, movie: str, theater: str, target_date: str = "") -> str:
     """Create a unique key for tracking alerts."""
-    return f"{platform}|{movie}|{theater}".lower()
+    return f"{platform}|{movie}|{theater}|{target_date}".lower()
 
 
 def run_checkers(config: dict) -> list:
@@ -176,8 +177,9 @@ def run_single_check(config: dict, state: dict) -> bool:
 
     for result in results:
         if result["available"]:
+            target_date = config.get("target_date", "")
             alert_key = _make_alert_key(
-                result["platform"], result["movie"], result["theater"]
+                result["platform"], result["movie"], result["theater"], target_date
             )
 
             # Check if we already alerted for this
@@ -257,10 +259,11 @@ def main():
         logger.info("⏸️ Monitor is PAUSED (active=false). Exiting.")
         return
 
-    logger.info(f"🎥 Movie:    {movie}")
-    logger.info(f"🏢 Theater:  {theater}")
-    logger.info(f"🏙️ City:     {city}")
-    logger.info(f"⏱️ Interval: {args.interval}s (2.5 mins)")
+    logger.info(f"🎥 Movie:       {movie}")
+    logger.info(f"🏢 Theater:     {theater}")
+    logger.info(f"🏙️ City:        {city}")
+    logger.info(f"🎯 Target Date: {config.get('target_date') or 'Any upcoming date'}")
+    logger.info(f"⏱️ Interval:    {args.interval}s (2.5 mins)")
     logger.info("-" * 60)
 
     state = load_state()

@@ -8,6 +8,7 @@ import requests
 import logging
 from datetime import datetime, timedelta
 from difflib import SequenceMatcher
+from .date_utils import parse_target_date
 
 logger = logging.getLogger(__name__)
 
@@ -255,13 +256,21 @@ def check(config: dict) -> dict:
     event_code = movie_info["code"]
     logger.info(f"[BMS] Found movie: {movie_info['name']} (code: {event_code})")
 
-    # Step 2: Check showtimes for the next N days
+    # Step 2: Determine which dates to check
+    target_date_obj = parse_target_date(config.get("target_date", ""))
+    target_date_str = target_date_obj.strftime("%Y-%m-%d") if target_date_obj else None
+
+    if target_date_obj:
+        logger.info(f"[BMS] 🎯 Filtering strictly for TARGET DATE: {target_date_str}")
+        dates_to_check = [target_date_obj]
+    else:
+        dates_to_check = [datetime.now().date() + timedelta(days=d) for d in range(check_days)]
+
     found_dates = []
     all_showtimes = []
 
-    for day_offset in range(check_days):
-        check_date = datetime.now() + timedelta(days=day_offset)
-        date_str = check_date.strftime("%Y%m%d")
+    for check_d in dates_to_check:
+        date_str = check_d.strftime("%Y%m%d")
 
         venues = _get_showtimes(city_code, event_code, date_str)
         if not venues:
@@ -269,10 +278,10 @@ def check(config: dict) -> dict:
 
         theater_matches = _find_theater_in_venues(venues, theater_name)
         if theater_matches:
-            found_dates.append(check_date.strftime("%Y-%m-%d"))
+            found_dates.append(check_d.strftime("%Y-%m-%d"))
             for match in theater_matches:
                 for st in match["showtimes"]:
-                    all_showtimes.append(f"{check_date.strftime('%d %b')} - {st}")
+                    all_showtimes.append(f"{check_d.strftime('%d %b')} - {st}")
 
     if found_dates:
         slug = movie_info.get("slug", movie_name.lower().replace(" ", "-"))
@@ -285,7 +294,10 @@ def check(config: dict) -> dict:
         result["dates"] = found_dates
         logger.info(f"[BMS] ✅ BOOKING OPEN! {len(all_showtimes)} shows found on {found_dates}")
     else:
-        result["reason"] = f"No showtimes found for '{theater_name}' in next {check_days} days"
+        if target_date_str:
+            result["reason"] = f"Bookings NOT open yet for '{theater_name}' on target date {target_date_str}"
+        else:
+            result["reason"] = f"No showtimes found for '{theater_name}' in next {check_days} days"
         logger.info(f"[BMS] {result['reason']}")
 
     return result

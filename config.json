@@ -3,6 +3,7 @@
   "city_code": "",
   "movie": "",
   "theater": "",
+  "target_date": "",
   "platforms": {
     "bms": true,
     "pvr": true,

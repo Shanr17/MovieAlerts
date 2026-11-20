@@ -7,6 +7,7 @@ import requests
 import logging
 from datetime import datetime, timedelta
 from difflib import SequenceMatcher
+from .date_utils import parse_target_date
 
 logger = logging.getLogger(__name__)
 
@@ -222,12 +223,20 @@ def check(config: dict) -> dict:
     logger.info(f"[PVR] Found movie: {movie_info['name']} (id: {movie_info['id']})")
 
     # Step 2: Check showtimes
+    target_date_obj = parse_target_date(config.get("target_date", ""))
+    target_date_str = target_date_obj.strftime("%Y-%m-%d") if target_date_obj else None
+
+    if target_date_obj:
+        logger.info(f"[PVR] 🎯 Filtering strictly for TARGET DATE: {target_date_str}")
+        dates_to_check = [target_date_obj]
+    else:
+        dates_to_check = [datetime.now().date() + timedelta(days=d) for d in range(check_days)]
+
     found_dates = []
     all_showtimes = []
 
-    for day_offset in range(check_days):
-        check_date = datetime.now() + timedelta(days=day_offset)
-        date_str = check_date.strftime("%Y-%m-%d")
+    for check_d in dates_to_check:
+        date_str = check_d.strftime("%Y-%m-%d")
 
         cinemas = _get_showtimes(city_slug, movie_info["id"], date_str)
         if not cinemas:
@@ -238,7 +247,7 @@ def check(config: dict) -> dict:
             found_dates.append(date_str)
             for match in theater_matches:
                 for st in match["showtimes"]:
-                    all_showtimes.append(f"{check_date.strftime('%d %b')} - {st}")
+                    all_showtimes.append(f"{check_d.strftime('%d %b')} - {st}")
 
     if found_dates:
         slug = movie_info.get("slug", movie_name.lower().replace(" ", "-"))
@@ -251,7 +260,10 @@ def check(config: dict) -> dict:
         result["dates"] = found_dates
         logger.info(f"[PVR] ✅ BOOKING OPEN! {len(all_showtimes)} shows on {found_dates}")
     else:
-        result["reason"] = f"No showtimes found for '{theater_name}' in next {check_days} days"
+        if target_date_str:
+            result["reason"] = f"Bookings NOT open yet for '{theater_name}' on target date {target_date_str}"
+        else:
+            result["reason"] = f"No showtimes found for '{theater_name}' in next {check_days} days"
         logger.info(f"[PVR] {result['reason']}")
 
     return result
