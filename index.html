@@ -287,33 +287,74 @@
             <label>City</label>
             <select id="city" onchange="onCityChange()">
                 <option value="">Select your city...</option>
+                <option value="chennai|CHEN">Chennai</option>
+                <option value="bangalore|BANG">Bangalore / Bengaluru</option>
+                <option value="hyderabad|HYD">Hyderabad</option>
                 <option value="mumbai|MUMBAI">Mumbai</option>
                 <option value="delhi-ncr|NCR">Delhi NCR</option>
-                <option value="bangalore|BANG">Bangalore</option>
-                <option value="chennai|CHEN">Chennai</option>
-                <option value="hyderabad|HYD">Hyderabad</option>
                 <option value="kolkata|KOLK">Kolkata</option>
                 <option value="pune|PUNE">Pune</option>
                 <option value="ahmedabad|AHMD">Ahmedabad</option>
                 <option value="kochi|KOCH">Kochi</option>
+                <option value="coimbatore|COIM">Coimbatore</option>
+                <option value="madurai|MADU">Madurai</option>
+                <option value="trichy|TRIC">Tiruchirappalli (Trichy)</option>
+                <option value="salem|SALM">Salem</option>
+                <option value="tirunelveli|TIRU">Tirunelveli</option>
+                <option value="vellore|VELL">Vellore</option>
+                <option value="erode|EROD">Erode</option>
+                <option value="thanjavur|THAN">Thanjavur</option>
+                <option value="dindigul|DIND">Dindigul</option>
+                <option value="thiruvananthapuram|TRIV">Thiruvananthapuram</option>
+                <option value="kozhikode|KOZH">Kozhikode (Calicut)</option>
+                <option value="thrissur|THRI">Thrissur</option>
+                <option value="kollam|KLAM">Kollam</option>
+                <option value="kannur|KANN">Kannur</option>
+                <option value="mysore|MYSO">Mysore / Mysuru</option>
+                <option value="mangalore|MANG">Mangalore / Mangaluru</option>
+                <option value="hubli|HUBL">Hubli / Dharwad</option>
+                <option value="belgaum|BELG">Belgaum / Belagavi</option>
+                <option value="vizag|VIZAG">Visakhapatnam (Vizag)</option>
+                <option value="vijayawada|VIJA">Vijayawada</option>
+                <option value="guntur|GUNT">Guntur</option>
+                <option value="nellore|NELL">Nellore</option>
+                <option value="warangal|WARA">Warangal</option>
+                <option value="kakinada|KAKI">Kakinada</option>
+                <option value="rajahmundry|RAJA">Rajahmundry</option>
+                <option value="chandigarh|CHAND">Chandigarh</option>
                 <option value="jaipur|JAIP">Jaipur</option>
                 <option value="lucknow|LUCK">Lucknow</option>
-                <option value="chandigarh|CHAND">Chandigarh</option>
+                <option value="kanpur|KANP">Kanpur</option>
+                <option value="varanasi|VARA">Varanasi</option>
+                <option value="agra|AGRA">Agra</option>
+                <option value="prayagraj|ALLH">Prayagraj (Allahabad)</option>
                 <option value="indore|INDO">Indore</option>
-                <option value="coimbatore|COIM">Coimbatore</option>
-                <option value="thiruvananthapuram|TRIV">Thiruvananthapuram</option>
-                <option value="vizag|VIZAG">Visakhapatnam</option>
-                <option value="nagpur|NAGP">Nagpur</option>
                 <option value="bhopal|BHOP">Bhopal</option>
-                <option value="goa|GOA">Goa</option>
-                <option value="vadodara|VADO">Vadodara</option>
+                <option value="jabalpur|JABA">Jabalpur</option>
+                <option value="gwalior|GWAL">Gwalior</option>
+                <option value="nagpur|NAGP">Nagpur</option>
+                <option value="nashik|NASH">Nashik</option>
+                <option value="aurangabad|AURA">Aurangabad (Chh. Sambhajinagar)</option>
+                <option value="kolhapur|KOLH">Kolhapur</option>
+                <option value="solapur|SOLA">Solapur</option>
                 <option value="surat|SURA">Surat</option>
-                <option value="guwahati|GUWA">Guwahati</option>
-                <option value="mysore|MYSO">Mysore</option>
-                <option value="madurai|MADU">Madurai</option>
-                <option value="trichy|TRIC">Tiruchirappalli</option>
+                <option value="vadodara|VADO">Vadodara</option>
+                <option value="rajkot|RAJK">Rajkot</option>
                 <option value="patna|PATN">Patna</option>
+                <option value="ranchi|RANC">Ranchi</option>
+                <option value="jamshedpur|JAMS">Jamshedpur</option>
+                <option value="bhubaneswar|BHUB">Bhubaneswar</option>
+                <option value="cuttack|CUTT">Cuttack</option>
+                <option value="guwahati|GUWA">Guwahati</option>
+                <option value="dehradun|DEHR">Dehradun</option>
+                <option value="goa|GOA">Goa</option>
+                <option value="other">✏️ Other / Type Custom City...</option>
             </select>
+
+            <div id="custom-city-box" style="display:none; margin-top:10px;">
+                <label>Type Your City Name</label>
+                <input type="text" id="custom-city" placeholder="e.g. Pondicherry, Salem, Hosur, etc.">
+            </div>
 
             <label>Movie Name</label>
             <input type="text" id="movie" placeholder="e.g., Pushpa 2">
@@ -459,7 +500,14 @@
         }
 
         function onCityChange() {
-            // Can be extended to auto-populate theaters
+            const citySel = document.getElementById('city');
+            const customBox = document.getElementById('custom-city-box');
+            if (citySel.value === 'other') {
+                customBox.style.display = 'block';
+                document.getElementById('custom-city').focus();
+            } else {
+                customBox.style.display = 'none';
+            }
         }
 
         function showStatus(type, message) {
@@ -505,7 +553,16 @@
         // === Build Config ===
         function buildConfig() {
             const cityVal = document.getElementById('city').value;
-            const [city, cityCode] = cityVal ? cityVal.split('|') : ['', ''];
+            let city = '';
+            let cityCode = '';
+
+            if (cityVal === 'other') {
+                const customCity = document.getElementById('custom-city').value.trim();
+                city = customCity.toLowerCase();
+                cityCode = customCity.toUpperCase().replace(/[^A-Z]/g, '').substring(0, 4);
+            } else if (cityVal) {
+                [city, cityCode] = cityVal.split('|');
+            }
 
             return {
                 city: city,
