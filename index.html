@@ -595,6 +595,9 @@
             <button class="btn btn-primary" onclick="saveAndDeploy()">
                 💾 Save Config & Start Monitoring
             </button>
+            <button class="btn btn-secondary" onclick="sendTestAlert()" style="margin-top:10px; background:linear-gradient(135deg, #0f3460, #1a1a2e); border:1px solid #4e54c8; color:#90caf9;">
+                🔔 Test Alert Notification (Send Test Message Now)
+            </button>
             <button class="btn btn-secondary" onclick="triggerManualCheck()" style="margin-top:10px;">
                 ▶️ Run Check Now
             </button>
@@ -1344,6 +1347,76 @@
             } catch (e) {
                 showStatus('error', `❌ Failed to save: ${e.message}`);
             }
+        }
+
+        async function sendTestAlert() {
+            showStatus('info', '⏳ Sending test notification to Ntfy and checking Telegram...');
+
+            let ntfyOk = false;
+            let tgOk = false;
+            const topic = (document.getElementById('ntfy-topic').value || 'MovieAlerts').trim();
+            const tgToken = (document.getElementById('tg-token').value || '').trim();
+            const tgChatId = (document.getElementById('tg-chatid').value || '').trim();
+
+            // 1. Direct browser test for Ntfy
+            try {
+                const resp = await fetch(`https://ntfy.sh/${topic}`, {
+                    method: 'POST',
+                    headers: {
+                        'Title': 'Test Alert: Movie Ticket Alert',
+                        'Priority': 'urgent',
+                        'Tags': 'clapper,tada,ticket'
+                    },
+                    body: '🎬 This is a TEST notification from your Movie Ticket Alert system! Alerts are functioning properly.'
+                });
+                if (resp.ok) ntfyOk = true;
+            } catch (e) {
+                console.log('Browser Ntfy test:', e);
+            }
+
+            // 2. Direct browser test for Telegram (if token provided in form)
+            if (tgToken && tgChatId) {
+                try {
+                    const tgResp = await fetch(`https://api.telegram.org/bot${tgToken}/sendMessage`, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({
+                            chat_id: tgChatId,
+                            text: '🎬 *TEST ALERT: Movie Ticket Alert System is Working!*\n\nThis confirms your Telegram bot is configured and ready to notify you when tickets open.',
+                            parse_mode: 'Markdown'
+                        })
+                    });
+                    const tgData = await tgResp.json();
+                    if (tgData.ok) tgOk = true;
+                } catch (e) {
+                    console.log('Browser Telegram test:', e);
+                }
+            }
+
+            // 3. Trigger GitHub Actions test dispatch to test GitHub Secrets
+            const gh = getGitHub();
+            let ghTriggered = false;
+            if (gh) {
+                try {
+                    await githubAPI('POST', '/actions/workflows/monitor.yml/dispatches', {
+                        ref: 'main',
+                        inputs: { test_alerts: 'true' },
+                    });
+                    ghTriggered = true;
+                } catch (e) {
+                    console.log('GitHub dispatch error:', e);
+                }
+            }
+
+            let msg = '✅ ';
+            if (ntfyOk) msg += 'Ntfy push sent! Check your ntfy app (topic: ' + topic + '). ';
+            if (tgOk) msg += 'Telegram message sent to chat ' + tgChatId + '! ';
+            if (ghTriggered) msg += 'GitHub Actions test job started (will test encrypted secrets in ~30s). ';
+            if (!ntfyOk && !tgOk && !ghTriggered) {
+                showStatus('error', '❌ Could not dispatch test. Check your network or GitHub token.');
+                return;
+            }
+            showStatus('success', msg);
         }
 
         async function triggerManualCheck() {

@@ -12,6 +12,11 @@ on:
         required: false
         default: 'false'
         type: boolean
+      test_alerts:
+        description: 'Send test alert notification to verify channels'
+        required: false
+        default: 'false'
+        type: boolean
   push:
     paths:
       - 'config.json'
@@ -59,7 +64,12 @@ jobs:
         run: pip install -r requirements.txt
 
       - name: Run monitor (checks twice with 2.5 min interval)
-        run: python monitor.py --iterations 2 --interval 150
+        run: |
+          if [ "${{ github.event.inputs.test_alerts }}" = "true" ]; then
+            python monitor.py --test-alerts
+          else
+            python monitor.py --iterations 2 --interval 150
+          fi
 
       - name: Commit state changes
         run: |

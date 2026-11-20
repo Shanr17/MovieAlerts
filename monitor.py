@@ -281,7 +281,7 @@ def run_single_check(config: dict, state: dict) -> bool:
 
 
 def main():
-    """Main entrypoint supporting multi-check intervals and watchlists."""
+    """Main entrypoint supporting multi-check intervals, watchlists, and test alerts."""
     parser = argparse.ArgumentParser(description="Movie Ticket Alert Monitor")
     parser.add_argument(
         "--iterations",
@@ -300,6 +300,12 @@ def main():
         action="store_true",
         help="Run continuously in an infinite loop (e.g. for local PC or Termux)",
     )
+    parser.add_argument(
+        "--test-alerts",
+        action="store_true",
+        default=os.environ.get("TEST_ALERTS", "false").lower() in ("true", "1", "yes"),
+        help="Send a test notification to all configured channels and exit",
+    )
     args = parser.parse_args()
 
     logger.info("=" * 60)
@@ -307,6 +313,22 @@ def main():
     logger.info("=" * 60)
 
     config = load_config()
+
+    if args.test_alerts:
+        logger.info("🔔 Running in TEST ALERT mode — sending simulated alert to configured channels...")
+        test_booking = {
+            "platform": "Alert System Test",
+            "movie": "TEST: Movie Ticket Alert is Working!",
+            "theater": config.get("theater") or "PVR Providence Mall",
+            "dates": ["Today / Upcoming"],
+            "showtimes": ["10:30 AM", "02:45 PM", "06:30 PM", "10:15 PM"],
+            "booking_url": "https://Shanr17.github.io/MovieAlerts/",
+        }
+        res = send_notifications(config, test_booking)
+        logger.info(f"Notification results: {res}")
+        logger.info("✅ Test alert execution completed.")
+        return
+
     targets = get_targets(config)
 
     if not targets:
