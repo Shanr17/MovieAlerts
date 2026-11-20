@@ -357,13 +357,22 @@
                 <input type="text" id="custom-city" placeholder="e.g. Pondicherry, Salem, Hosur, etc.">
             </div>
 
-            <label>Movie Name</label>
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-top:14px; margin-bottom:6px;">
+                <label style="margin:0;">Movie Name</label>
+                <button type="button" class="btn btn-secondary" id="btn-refresh-movies" style="width:auto; padding:4px 10px; font-size:0.75em; margin:0;" onclick="refreshLiveMovies()">
+                    🔄 Live Sync Movies
+                </button>
+            </div>
             <div style="display:flex; flex-direction:column; gap:8px;">
                 <select id="movie-select" onchange="onMovieSelectChange(this.value)">
-                    <option value="">-- Select Movie (Now Playing or Upcoming) --</option>
+                    <option value="">-- Choose Live Movie or Type Below --</option>
                 </select>
-                <input type="text" id="movie" list="movies-list" placeholder="Or type movie name manually (e.g. Pushpa 2)">
+                <input type="text" id="movie" list="movies-list" placeholder="Or type movie name manually...">
                 <datalist id="movies-list"></datalist>
+                <div id="movie-live-badge" style="font-size:0.75em; color:var(--text-dim); display:flex; align-items:center; gap:6px;">
+                    <span style="display:inline-block; width:8px; height:8px; border-radius:50%; background:var(--success);"></span>
+                    <span id="movie-live-text">Live movie database synced</span>
+                </div>
             </div>
 
             <label style="margin-top:16px;">Theater Name</label>
@@ -676,43 +685,123 @@
             ]
         };
 
-        function populateMovies() {
+        let liveDatabase = null;
+
+        async function loadLiveMoviesDatabase() {
+            try {
+                const resp = await fetch('./live_movies.json?t=' + Date.now());
+                if (resp.ok) {
+                    liveDatabase = await resp.json();
+                    const badge = document.getElementById('movie-live-text');
+                    if (badge && liveDatabase.updated_at) {
+                        badge.textContent = 'Live BMS & PVR feed active (' + new Date(liveDatabase.updated_at).toLocaleDateString() + ')';
+                    }
+                }
+            } catch (e) {
+                console.log('Using local fallback for live movies:', e);
+            }
+        }
+
+        async function refreshLiveMovies() {
+            const btn = document.getElementById('btn-refresh-movies');
+            const statusText = document.getElementById('movie-live-text');
+            const citySel = document.getElementById('city');
+            const cityVal = citySel.value ? citySel.value.split('|')[0].toLowerCase() : 'pondicherry';
+            const cityCode = citySel.value ? citySel.value.split('|')[1] : 'POND';
+
+            btn.disabled = true;
+            btn.textContent = '⏳ Syncing...';
+            statusText.textContent = `Fetching live listings for ${cityVal.toUpperCase()}...`;
+
+            try {
+                const targetUrl = `https://in.bookmyshow.com/api/explore/v1/explore/getMoviesInCity?city=${cityCode}&lang=en&type=MT`;
+                const proxyUrl = `https://api.allorigins.win/get?url=${encodeURIComponent(targetUrl)}`;
+                
+                const resp = await fetch(proxyUrl, { cache: 'no-store' });
+                if (resp.ok) {
+                    const proxyData = await resp.json();
+                    const bmsData = JSON.parse(proxyData.contents);
+                    const movies = bmsData.moviesData || bmsData.data || [];
+                    if (movies.length > 0) {
+                        const nowTitles = movies.map(m => m.EventTitle || m.name).filter(Boolean);
+                        populateMoviesWithData(cityVal, nowTitles, []);
+                        statusText.textContent = `🟢 Live BMS Sync success! (${nowTitles.length} movies currently in cinemas)`;
+                        btn.textContent = '✅ Synced!';
+                        setTimeout(() => { btn.disabled = false; btn.textContent = '🔄 Live Sync Movies'; }, 2000);
+                        return;
+                    }
+                }
+            } catch (err) {
+                console.warn('Live proxy fetch error, falling back to repository feed:', err);
+            }
+
+            await loadLiveMoviesDatabase();
+            populateMoviesForCity(cityVal);
+            btn.disabled = false;
+            btn.textContent = '🔄 Live Sync Movies';
+        }
+
+        function populateMoviesForCity(cityKey) {
+            const city = (cityKey || 'pondicherry').toLowerCase();
+            let nowShowing = [];
+            let comingSoon = [];
+
+            if (liveDatabase && liveDatabase.cities && liveDatabase.cities[city]) {
+                nowShowing = liveDatabase.cities[city].now_showing || [];
+                comingSoon = liveDatabase.cities[city].coming_soon || [];
+            } else if (liveDatabase && liveDatabase.cities && liveDatabase.cities['pondicherry']) {
+                nowShowing = liveDatabase.cities['pondicherry'].now_showing || [];
+                comingSoon = liveDatabase.cities['pondicherry'].coming_soon || [];
+            }
+
+            if (nowShowing.length === 0 && comingSoon.length === 0) {
+                nowShowing = NOW_PLAYING_MOVIES;
+                comingSoon = UPCOMING_MOVIES;
+            }
+
+            populateMoviesWithData(city, nowShowing, comingSoon);
+        }
+
+        function populateMoviesWithData(cityName, nowShowing, comingSoon) {
             const movieSelect = document.getElementById('movie-select');
             const moviesList = document.getElementById('movies-list');
-            movieSelect.innerHTML = '<option value="">-- Select Movie (Now Playing or Upcoming) --</option>';
+            movieSelect.innerHTML = '<option value="">-- Choose Live Movie or Type Below --</option>';
             moviesList.innerHTML = '';
 
-            // Group 1: Now Playing
-            const grpNow = document.createElement('optgroup');
-            grpNow.label = '🎬 NOW PLAYING (In Theaters)';
-            NOW_PLAYING_MOVIES.forEach(m => {
-                const opt = document.createElement('option');
-                opt.value = m;
-                opt.textContent = '▶ ' + m;
-                grpNow.appendChild(opt);
+            const cityLabel = cityName.charAt(0).toUpperCase() + cityName.slice(1);
 
-                const dataOpt = document.createElement('option');
-                dataOpt.value = m;
-                moviesList.appendChild(dataOpt);
-            });
-            movieSelect.appendChild(grpNow);
+            if (nowShowing && nowShowing.length > 0) {
+                const grpNow = document.createElement('optgroup');
+                grpNow.label = `🟢 NOW SHOWING IN ${cityLabel.toUpperCase()} (Live BMS / PVR)`;
+                nowShowing.forEach(m => {
+                    const opt = document.createElement('option');
+                    opt.value = m;
+                    opt.textContent = '▶ ' + m;
+                    grpNow.appendChild(opt);
 
-            // Group 2: Upcoming
-            const grpUp = document.createElement('optgroup');
-            grpUp.label = '🚀 UPCOMING (Watch for Booking Open)';
-            UPCOMING_MOVIES.forEach(m => {
-                const opt = document.createElement('option');
-                opt.value = m;
-                opt.textContent = '⏳ ' + m;
-                grpUp.appendChild(opt);
+                    const dataOpt = document.createElement('option');
+                    dataOpt.value = m;
+                    moviesList.appendChild(dataOpt);
+                });
+                movieSelect.appendChild(grpNow);
+            }
 
-                // Add clean title to datalist for search
-                const clean = m.replace(/\s*\([^)]*\)\s*$/, '').trim();
-                const dataOpt = document.createElement('option');
-                dataOpt.value = clean;
-                moviesList.appendChild(dataOpt);
-            });
-            movieSelect.appendChild(grpUp);
+            if (comingSoon && comingSoon.length > 0) {
+                const grpUp = document.createElement('optgroup');
+                grpUp.label = '🟡 ADVANCE BOOKING / COMING SOON';
+                comingSoon.forEach(m => {
+                    const opt = document.createElement('option');
+                    opt.value = m;
+                    opt.textContent = '⏳ ' + m;
+                    grpUp.appendChild(opt);
+
+                    const clean = m.replace(/\s*\([^)]*\)\s*$/, '').trim();
+                    const dataOpt = document.createElement('option');
+                    dataOpt.value = clean;
+                    moviesList.appendChild(dataOpt);
+                });
+                movieSelect.appendChild(grpUp);
+            }
         }
 
         function onMovieSelectChange(val) {
@@ -776,6 +865,7 @@
             }
 
             updateTheatersForCity(cityKey);
+            populateMoviesForCity(cityKey);
         }
 
         function showStatus(type, message) {
@@ -1007,9 +1097,9 @@
         }
 
         // === Init ===
-        window.addEventListener('load', () => {
+        window.addEventListener('load', async () => {
             loadLocal();
-            populateMovies();
+            await loadLiveMoviesDatabase();
             onCityChange();
             // Try to load last status if GitHub is configured
             if (document.getElementById('gh-token').value && document.getElementById('gh-repo').value) {

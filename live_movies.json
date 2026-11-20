@@ -1,0 +1,71 @@
+{
+  "updated_at": "2026-11-20T10:15:00Z",
+  "cities": {
+    "pondicherry": {
+      "name": "Pondicherry",
+      "now_showing": [
+        "Amaran",
+        "Kanguva",
+        "Lucky Baskhar",
+        "Gladiator II",
+        "Singham Again",
+        "Bhool Bhulaiyaa 3",
+        "Bloody Beggar",
+        "Brother",
+        "The Sabarmati Report",
+        "Wicked"
+      ],
+      "coming_soon": [
+        "Pushpa 2: The Rule",
+        "Moana 2",
+        "Baby John",
+        "Vidaamuyarchi",
+        "Game Changer",
+        "Good Bad Ugly",
+        "Thug Life",
+        "Coolie"
+      ]
+    },
+    "chennai": {
+      "name": "Chennai",
+      "now_showing": [
+        "Amaran",
+        "Kanguva",
+        "Lucky Baskhar",
+        "Gladiator II",
+        "Bloody Beggar",
+        "Brother",
+        "Singham Again",
+        "Bhool Bhulaiyaa 3",
+        "Wicked"
+      ],
+      "coming_soon": [
+        "Pushpa 2: The Rule",
+        "Moana 2",
+        "Baby John",
+        "Vidaamuyarchi",
+        "Game Changer",
+        "Good Bad Ugly"
+      ]
+    },
+    "bangalore": {
+      "name": "Bangalore",
+      "now_showing": [
+        "Amaran",
+        "Kanguva",
+        "Lucky Baskhar",
+        "Bagheera",
+        "Gladiator II",
+        "Singham Again",
+        "Bhool Bhulaiyaa 3",
+        "Wicked"
+      ],
+      "coming_soon": [
+        "Pushpa 2: The Rule",
+        "Moana 2",
+        "Baby John",
+        "Game Changer"
+      ]
+    }
+  }
+}
