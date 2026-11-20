@@ -1,5 +1,5 @@
 {
-  "last_check": "2026-11-20T14:45:39.902680",
+  "last_check": "2026-11-20T14:50:59.252850",
   "alerted": {
     "bookmyshow|scene|pvr providence mall|2026-11-21": {
       "timestamp": "2026-11-20T14:43:07.497898",
@@ -11,6 +11,38 @@
         "21 Nov - 10:30 PM"
       ],
       "booking_url": "https://in.bookmyshow.com/movies/pondicherry/scene/buytickets/ET00516631/20261121",
+      "notification_results": {
+        "telegram": true,
+        "ntfy": true
+      }
+    },
+    "bookmyshow|o.m operation mole|pvr providence mall|2026-11-23": {
+      "timestamp": "2026-11-20T14:48:24.736125",
+      "movie": "O.M Operation Mole",
+      "theater": "PVR Providence Mall",
+      "platform": "BookMyShow",
+      "showtimes": [
+        "23 Nov - 11:10 AM",
+        "23 Nov - 02:50 PM",
+        "23 Nov - 06:30 PM",
+        "23 Nov - 10:10 PM",
+        "23 Nov - 11:30 AM",
+        "23 Nov - 02:45 PM",
+        "23 Nov - 06:45 PM",
+        "23 Nov - 10:00 PM",
+        "23 Nov - 11:15 AM",
+        "23 Nov - 03:00 PM",
+        "23 Nov - 10:30 PM",
+        "23 Nov - 12:00 AM",
+        "23 Nov - 11:59 AM",
+        "23 Nov - 12:00 PM",
+        "23 Nov - 3:59 PM",
+        "23 Nov - 4:00 PM",
+        "23 Nov - 6:59 PM",
+        "23 Nov - 7:00 PM",
+        "23 Nov - 11:59 PM"
+      ],
+      "booking_url": "https://in.bookmyshow.com/movies/pondicherry/om-operation-mole/buytickets/ET00504901/20261123",
       "notification_results": {
         "telegram": true,
         "ntfy": true
