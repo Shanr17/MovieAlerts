@@ -87,7 +87,7 @@ def send(config: dict, booking_info: dict) -> bool:
             chat_info = res_data.get("chat", {})
             chat_target = chat_info.get("username") or chat_info.get("first_name") or str(chat_id)
             msg_id = res_data.get("message_id", "")
-            logger.info(f"[Telegram] ✅ Alert sent successfully from @{bot_user} to {chat_target} (ID: {chat_id}, Msg #{msg_id})")
+            logger.info(f"[Telegram] [OK] Alert sent successfully from @{bot_user} to {chat_target} (ID: {chat_id}, Msg #{msg_id})")
             return True
         else:
             logger.error(f"[Telegram] API error: {result.get('description', 'Unknown error')}")

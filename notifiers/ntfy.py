@@ -83,7 +83,7 @@ def send(config: dict, booking_info: dict) -> bool:
         resp = requests.post(url, data=message.encode("utf-8"), headers=headers, timeout=10)
 
         if resp.status_code == 200:
-            logger.info(f"[Ntfy] ✅ Alert sent to topic '{topic}'")
+            logger.info(f"[Ntfy] [OK] Alert sent to topic '{topic}'")
             return True
         else:
             logger.error(f"[Ntfy] Failed: HTTP {resp.status_code} - {resp.text}")
