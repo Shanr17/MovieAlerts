@@ -52,6 +52,8 @@ PVR_CITIES = {
     "mysuru": "mysore",
     "thiruvananthapuram": "thiruvananthapuram",
     "trivandrum": "thiruvananthapuram",
+    "pondicherry": "puducherry",
+    "puducherry": "puducherry",
 }
 
 

@@ -50,6 +50,8 @@ DISTRICT_CITIES = {
     "mysuru": "mysuru",
     "thiruvananthapuram": "thiruvananthapuram",
     "trivandrum": "thiruvananthapuram",
+    "pondicherry": "puducherry",
+    "puducherry": "puducherry",
 }
 
 

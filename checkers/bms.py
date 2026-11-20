@@ -58,6 +58,11 @@ CITY_CODES = {
     "madurai": "MADU",
     "trichy": "TRIC",
     "tiruchirappalli": "TRIC",
+    "pondicherry": "POND",
+    "puducherry": "POND",
+    "salem": "SALM",
+    "vellore": "VELL",
+    "tirunelveli": "TIRU",
 }
 
 
