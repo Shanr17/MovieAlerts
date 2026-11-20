@@ -132,7 +132,7 @@ def _get_movies_from_url(url: str) -> list:
 def _search_movie(city: str, city_code: str, movie_name: str) -> dict | None:
     """Search for a movie on BMS in now-showing and upcoming listings."""
     city_slug = city.lower().replace(" ", "-")
-    
+
     # Check 1: Now showing page
     now_url = f"{BMS_BASE}/explore/movies-{city_slug}"
     movies = _get_movies_from_url(now_url)
@@ -156,41 +156,63 @@ def _check_showtimes_page(city: str, city_code: str, movie_info: dict, date_str:
     event_code = movie_info["code"]
     city_slug = city.lower().replace(" ", "-")
 
-    url = f"{BMS_BASE}/buytickets/{slug}-{city_slug}/movie-{city_code.lower()}-MT/{event_code}/{date_str}"
-    
-    try:
-        req = urllib.request.Request(url, headers=HEADERS)
-        with urllib.request.urlopen(req, timeout=12) as resp:
-            html = resp.read().decode("utf-8", errors="ignore")
+    # BookMyShow uses modern URL structure: /movies/{city}/{slug}/buytickets/{event_code}/{date}
+    urls_to_try = [
+        f"{BMS_BASE}/movies/{city_slug}/{slug}/buytickets/{event_code}/{date_str}",
+        f"{BMS_BASE}/buytickets/{slug}-{city_slug}/movie-{city_code.lower()}-MT/{event_code}/{date_str}",
+    ]
 
-        # Check if theater matches in page
-        # Check by full name or major keyword (e.g. "Providence" or "PVR")
-        th_parts = [p for p in re.split(r'\s+', theater_name) if len(p) > 3]
-        found_venue = False
-        if _fuzzy_match(theater_name, html, threshold=0.6):
-            found_venue = True
-        elif any(p.lower() in html.lower() for p in th_parts):
-            found_venue = True
+    for url in urls_to_try:
+        try:
+            req = urllib.request.Request(url, headers=HEADERS)
+            with urllib.request.urlopen(req, timeout=12) as resp:
+                final_url = resp.geturl()
+                # If redirected to BMS homepage, the URL is not a valid buytickets page
+                if final_url.rstrip("/") == BMS_BASE.rstrip("/"):
+                    continue
 
-        if found_venue:
-            # Extract any times formatted as HH:MM AM/PM
-            times = list(dict.fromkeys(re.findall(r'\b(0?[1-9]|1[0-2]):[0-5][0-9]\s*(?:AM|PM)\b', html, re.IGNORECASE)))
-            return {
-                "available": True,
-                "booking_url": url,
-                "showtimes": times
-            }
+                html = resp.read().decode("utf-8", errors="ignore")
 
-    except urllib.error.HTTPError as e:
-        if e.code == 404:
-            # 404 means showtimes not published yet for this date
-            pass
-        else:
+            # Check if theater matches in page
+            th_parts = [p.lower() for p in re.split(r'[\s:,\.-]+', theater_name) if len(p) > 3]
+            html_lower = html.lower()
+
+            found_venue = False
+            if _fuzzy_match(theater_name, html, threshold=0.6):
+                found_venue = True
+            elif any(p in html_lower for p in th_parts):
+                found_venue = True
+
+            if found_venue:
+                times = []
+                for p in th_parts:
+                    pos = html_lower.find(p)
+                    if pos != -1:
+                        # Extract showtimes from the venue's section (approx 3500 chars)
+                        sec = html[pos:pos + 3500]
+                        sec_times = re.findall(r'\b(?:0?[1-9]|1[0-2]):[0-5][0-9]\s*(?:AM|PM)\b', sec, re.IGNORECASE)
+                        if sec_times:
+                            times = list(dict.fromkeys(sec_times))
+                            break
+
+                if not times:
+                    all_times = re.findall(r'\b(?:0?[1-9]|1[0-2]):[0-5][0-9]\s*(?:AM|PM)\b', html, re.IGNORECASE)
+                    times = list(dict.fromkeys(all_times))
+
+                return {
+                    "available": True,
+                    "booking_url": url,
+                    "showtimes": times
+                }
+
+        except urllib.error.HTTPError as e:
+            if e.code == 404:
+                continue
             logger.debug(f"[BMS] Showtimes check HTTP {e.code} for {url}")
-    except Exception as e:
-        logger.debug(f"[BMS] Showtimes check error for {url}: {e}")
+        except Exception as e:
+            logger.debug(f"[BMS] Showtimes check error for {url}: {e}")
 
-    return {"available": False, "booking_url": url, "showtimes": []}
+    return {"available": False, "booking_url": urls_to_try[0], "showtimes": []}
 
 
 def check(config: dict) -> dict:
