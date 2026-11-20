@@ -1,11 +1,13 @@
 """
 BookMyShow (BMS) Booking Checker
-Checks if ticket bookings are open for a specific movie at a specific theater.
-Uses BMS internal API endpoints that their web frontend calls.
+Uses direct browser-grade web requests to avoid Cloudflare/Akamai bot detection.
 """
 
-import requests
+import json
 import logging
+import re
+import urllib.request
+import urllib.parse
 from datetime import datetime, timedelta
 from difflib import SequenceMatcher
 from .date_utils import parse_target_date
@@ -16,14 +18,16 @@ BMS_BASE = "https://in.bookmyshow.com"
 
 HEADERS = {
     "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 "
-                  "(KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
-    "Accept": "application/json, text/plain, */*",
+                  "(KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36",
+    "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,*/*;q=0.8",
     "Accept-Language": "en-US,en;q=0.9",
-    "Referer": "https://in.bookmyshow.com/",
-    "Origin": "https://in.bookmyshow.com",
+    "Upgrade-Insecure-Requests": "1",
+    "Sec-Fetch-Dest": "document",
+    "Sec-Fetch-Mode": "navigate",
+    "Sec-Fetch-Site": "none",
+    "Sec-Fetch-User": "?1",
 }
 
-# Major Indian cities with BMS region codes
 CITY_CODES = {
     "mumbai": "MUMBAI",
     "delhi": "NCR",
@@ -72,11 +76,9 @@ def _fuzzy_match(query: str, target: str, threshold: float = 0.5) -> bool:
     query_lower = query.lower().strip()
     target_lower = target.lower().strip()
 
-    # Exact substring match
     if query_lower in target_lower or target_lower in query_lower:
         return True
 
-    # Fuzzy ratio match
     ratio = SequenceMatcher(None, query_lower, target_lower).ratio()
     return ratio >= threshold
 
@@ -84,144 +86,116 @@ def _fuzzy_match(query: str, target: str, threshold: float = 0.5) -> bool:
 def _get_city_code(city: str) -> str:
     """Resolve city name to BMS region code."""
     city_lower = city.lower().strip()
-
-    # Direct lookup
     if city_lower in CITY_CODES:
         return CITY_CODES[city_lower]
-
-    # Fuzzy match
     for name, code in CITY_CODES.items():
         if _fuzzy_match(city_lower, name, threshold=0.7):
             return code
-
-    # Return as-is (user may have provided the code directly)
     return city.upper()
 
 
-def _search_movie(city_code: str, movie_name: str) -> dict | None:
-    """Search for a movie on BMS and return its details."""
+def _get_movies_from_url(url: str) -> list:
+    """Fetch a BMS page and extract movie entries from schema.org ItemList."""
+    movies = []
     try:
-        # Try the quicksearch API
-        url = f"{BMS_BASE}/api/explore/v1/explore/quicksearch"
-        params = {
-            "q": movie_name,
-            "city": city_code,
-            "lang": "en",
-            "type": "MT",
-        }
-        resp = requests.get(url, params=params, headers=HEADERS, timeout=15)
-        resp.raise_for_status()
-        data = resp.json()
+        req = urllib.request.Request(url, headers=HEADERS)
+        with urllib.request.urlopen(req, timeout=12) as resp:
+            html = resp.read().decode("utf-8", errors="ignore")
 
-        # Search through results for a movie match
-        results = data.get("docs", data.get("data", data.get("results", [])))
-        if isinstance(results, list):
-            for item in results:
-                name = item.get("EventTitle", item.get("name", item.get("title", "")))
-                if _fuzzy_match(movie_name, name, threshold=0.6):
-                    return {
-                        "code": item.get("EventCode", item.get("code", item.get("eventCode", ""))),
-                        "name": name,
-                        "slug": item.get("EventURLTitle", item.get("slug", "")),
-                        "group": item.get("EventGroup", item.get("groupCode", "")),
-                    }
-
+        scripts = [s for s in html.split("<script") if "ld+json" in s]
+        for s in scripts:
+            content = s.split(">", 1)[1].split("</script>")[0]
+            try:
+                data = json.loads(content)
+                if data.get("@type") == "ItemList":
+                    for item in data.get("itemListElement", []):
+                        name = item.get("name")
+                        movie_url = item.get("url", "")
+                        code_match = re.search(r"(ET\d+)", movie_url)
+                        code = code_match.group(1) if code_match else ""
+                        parts = [p for p in movie_url.split("/") if p]
+                        slug = parts[-2] if len(parts) >= 2 and parts[-1].startswith("ET") else (parts[-1] if parts else "")
+                        if name and code:
+                            movies.append({
+                                "name": name,
+                                "code": code,
+                                "slug": slug,
+                                "url": movie_url
+                            })
+            except Exception:
+                continue
     except Exception as e:
-        logger.warning(f"BMS quicksearch failed: {e}")
+        logger.debug(f"[BMS] Error fetching {url}: {e}")
+    return movies
 
-    try:
-        # Fallback: Try the movies listing API
-        url = f"{BMS_BASE}/api/explore/v1/explore/getMoviesInCity"
-        params = {
-            "city": city_code,
-            "lang": "en",
-            "type": "MT",
-        }
-        resp = requests.get(url, params=params, headers=HEADERS, timeout=15)
-        resp.raise_for_status()
-        data = resp.json()
 
-        movies = data.get("moviesData", data.get("data", data.get("results", [])))
-        if isinstance(movies, list):
-            for movie in movies:
-                name = movie.get("EventTitle", movie.get("name", movie.get("title", "")))
-                if _fuzzy_match(movie_name, name, threshold=0.6):
-                    return {
-                        "code": movie.get("EventCode", movie.get("code", "")),
-                        "name": name,
-                        "slug": movie.get("EventURLTitle", movie.get("slug", "")),
-                        "group": movie.get("EventGroup", movie.get("groupCode", "")),
-                    }
+def _search_movie(city: str, city_code: str, movie_name: str) -> dict | None:
+    """Search for a movie on BMS in now-showing and upcoming listings."""
+    city_slug = city.lower().replace(" ", "-")
+    
+    # Check 1: Now showing page
+    now_url = f"{BMS_BASE}/explore/movies-{city_slug}"
+    movies = _get_movies_from_url(now_url)
+    for m in movies:
+        if _fuzzy_match(movie_name, m["name"], threshold=0.55):
+            return m
 
-    except Exception as e:
-        logger.warning(f"BMS movies listing failed: {e}")
+    # Check 2: Upcoming movies page
+    up_url = f"{BMS_BASE}/explore/upcoming-movies-{city_slug}"
+    up_movies = _get_movies_from_url(up_url)
+    for m in up_movies:
+        if _fuzzy_match(movie_name, m["name"], threshold=0.55):
+            return m
 
     return None
 
 
-def _get_showtimes(city_code: str, event_code: str, date_str: str) -> list:
-    """Get showtimes for a movie on a specific date. Returns list of venue dicts."""
+def _check_showtimes_page(city: str, city_code: str, movie_info: dict, date_str: str, theater_name: str) -> dict:
+    """Check BMS buytickets page for a movie on a specific date."""
+    slug = movie_info.get("slug", movie_info["name"].lower().replace(" ", "-"))
+    event_code = movie_info["code"]
+    city_slug = city.lower().replace(" ", "-")
+
+    url = f"{BMS_BASE}/buytickets/{slug}-{city_slug}/movie-{city_code.lower()}-MT/{event_code}/{date_str}"
+    
     try:
-        url = f"{BMS_BASE}/api/explore/v1/explore/getShowtimes"
-        params = {
-            "appCode": "MOBAND2",
-            "appVersion": "14304",
-            "city": city_code,
-            "eventCode": event_code,
-            "contentType": "MT",
-            "date": date_str,
-            "lang": "en",
-        }
-        resp = requests.get(url, params=params, headers=HEADERS, timeout=15)
-        resp.raise_for_status()
-        data = resp.json()
+        req = urllib.request.Request(url, headers=HEADERS)
+        with urllib.request.urlopen(req, timeout=12) as resp:
+            html = resp.read().decode("utf-8", errors="ignore")
 
-        # BMS returns venue data in various formats
-        venues = (
-            data.get("ShowDetails", []) or
-            data.get("venues", []) or
-            data.get("cinemas", []) or
-            data.get("data", {}).get("ShowDetails", []) or
-            []
-        )
-        return venues if isinstance(venues, list) else []
+        # Check if theater matches in page
+        # Check by full name or major keyword (e.g. "Providence" or "PVR")
+        th_parts = [p for p in re.split(r'\s+', theater_name) if len(p) > 3]
+        found_venue = False
+        if _fuzzy_match(theater_name, html, threshold=0.6):
+            found_venue = True
+        elif any(p.lower() in html.lower() for p in th_parts):
+            found_venue = True
 
+        if found_venue:
+            # Extract any times formatted as HH:MM AM/PM
+            times = list(dict.fromkeys(re.findall(r'\b(0?[1-9]|1[0-2]):[0-5][0-9]\s*(?:AM|PM)\b', html, re.IGNORECASE)))
+            return {
+                "available": True,
+                "booking_url": url,
+                "showtimes": times
+            }
+
+    except urllib.error.HTTPError as e:
+        if e.code == 404:
+            # 404 means showtimes not published yet for this date
+            pass
+        else:
+            logger.debug(f"[BMS] Showtimes check HTTP {e.code} for {url}")
     except Exception as e:
-        logger.warning(f"BMS showtimes API failed for date {date_str}: {e}")
-        return []
+        logger.debug(f"[BMS] Showtimes check error for {url}: {e}")
 
-
-def _find_theater_in_venues(venues: list, theater_name: str) -> list:
-    """Find matching theater in venue list."""
-    matches = []
-    for venue in venues:
-        venue_name = venue.get("VenueName", venue.get("name", venue.get("cinemaName", "")))
-        if _fuzzy_match(theater_name, venue_name, threshold=0.5):
-            shows = venue.get("ShowTimes", venue.get("shows", venue.get("showtimes", [])))
-            show_times = []
-            if isinstance(shows, list):
-                for show in shows:
-                    time_str = show.get("ShowTime", show.get("time", show.get("showTime", "")))
-                    if time_str:
-                        show_times.append(time_str)
-            matches.append({
-                "venue_name": venue_name,
-                "venue_code": venue.get("VenueCode", venue.get("code", "")),
-                "showtimes": show_times,
-            })
-    return matches
+    return {"available": False, "booking_url": url, "showtimes": []}
 
 
 def check(config: dict) -> dict:
     """
     Check BookMyShow for ticket availability.
-
-    Args:
-        config: Dict with keys: city, city_code, movie, theater, check_next_days
-
-    Returns:
-        Dict with keys: available (bool), platform, movie, theater,
-                       showtimes, booking_url, dates, reason
     """
     movie_name = config.get("movie", "")
     theater_name = config.get("theater", "")
@@ -240,21 +214,20 @@ def check(config: dict) -> dict:
         "reason": "",
     }
 
-    if not movie_name or not theater_name or not city_code:
+    if not movie_name or not theater_name or not city:
         result["reason"] = "Missing movie, theater, or city in config"
         return result
 
     logger.info(f"[BMS] Searching for '{movie_name}' in {city} ({city_code})...")
 
     # Step 1: Find the movie
-    movie_info = _search_movie(city_code, movie_name)
+    movie_info = _search_movie(city, city_code, movie_name)
     if not movie_info:
-        result["reason"] = f"Movie '{movie_name}' not found on BMS for city {city_code}"
+        result["reason"] = f"Movie '{movie_name}' not listed yet on BMS for {city}"
         logger.info(f"[BMS] {result['reason']}")
         return result
 
-    event_code = movie_info["code"]
-    logger.info(f"[BMS] Found movie: {movie_info['name']} (code: {event_code})")
+    logger.info(f"[BMS] Found movie on BMS: {movie_info['name']} ({movie_info['code']})")
 
     # Step 2: Determine which dates to check
     target_date_obj = parse_target_date(config.get("target_date", ""))
@@ -268,31 +241,24 @@ def check(config: dict) -> dict:
 
     found_dates = []
     all_showtimes = []
+    final_booking_url = movie_info.get("url", "")
 
     for check_d in dates_to_check:
         date_str = check_d.strftime("%Y%m%d")
-
-        venues = _get_showtimes(city_code, event_code, date_str)
-        if not venues:
-            continue
-
-        theater_matches = _find_theater_in_venues(venues, theater_name)
-        if theater_matches:
+        show_info = _check_showtimes_page(city, city_code, movie_info, date_str, theater_name)
+        if show_info["available"]:
             found_dates.append(check_d.strftime("%Y-%m-%d"))
-            for match in theater_matches:
-                for st in match["showtimes"]:
-                    all_showtimes.append(f"{check_d.strftime('%d %b')} - {st}")
+            final_booking_url = show_info["booking_url"]
+            for st in show_info["showtimes"]:
+                all_showtimes.append(f"{check_d.strftime('%d %b')} - {st}")
 
     if found_dates:
-        slug = movie_info.get("slug", movie_name.lower().replace(" ", "-"))
-        booking_url = f"{BMS_BASE}/buytickets/{slug}-{city.lower()}/movie-{city_code.lower()}-MT/{event_code}"
-
         result["available"] = True
         result["movie"] = movie_info["name"]
         result["showtimes"] = all_showtimes
-        result["booking_url"] = booking_url
+        result["booking_url"] = final_booking_url
         result["dates"] = found_dates
-        logger.info(f"[BMS] ✅ BOOKING OPEN! {len(all_showtimes)} shows found on {found_dates}")
+        logger.info(f"[BMS] ✅ BOOKING OPEN! Shows found on {found_dates}")
     else:
         if target_date_str:
             result["reason"] = f"Bookings NOT open yet for '{theater_name}' on target date {target_date_str}"
