@@ -69,12 +69,15 @@ def load_config() -> dict:
 
     for env_key, config_path in env_mappings.items():
         value = os.environ.get(env_key)
-        if value is not None:
+        if value is not None and str(value).strip() != "":
+            val_str = str(value).strip()
             # Convert string booleans
-            if value.lower() in ("true", "1", "yes"):
+            if val_str.lower() in ("true", "1", "yes"):
                 value = True
-            elif value.lower() in ("false", "0", "no"):
+            elif val_str.lower() in ("false", "0", "no"):
                 value = False
+            else:
+                value = val_str
 
             # Set nested config value
             if isinstance(config_path, tuple):
