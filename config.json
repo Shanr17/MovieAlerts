@@ -12,7 +12,7 @@
   "alerts": {
     "telegram": {
       "enabled": true,
-      "bot_token": "9094844812:AAEsiJweCGuunaM7ilsZy_DrCxeDlqTkLuE",
+      "bot_token": "",
       "chat_id": "1797570807"
     },
     "discord": {

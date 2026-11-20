@@ -497,13 +497,19 @@
         function saveLocal() {
             localStorage.setItem('gh-token', document.getElementById('gh-token').value);
             localStorage.setItem('gh-repo', document.getElementById('gh-repo').value);
+            localStorage.setItem('tg-token', document.getElementById('tg-token').value);
+            localStorage.setItem('tg-chatid', document.getElementById('tg-chatid').value);
+            localStorage.setItem('dc-webhook', document.getElementById('dc-webhook').value);
+            localStorage.setItem('ntfy-topic', document.getElementById('ntfy-topic').value);
         }
 
         function loadLocal() {
-            const token = localStorage.getItem('gh-token') || '';
-            const repo = localStorage.getItem('gh-repo') || '';
-            document.getElementById('gh-token').value = token;
-            document.getElementById('gh-repo').value = repo;
+            document.getElementById('gh-token').value = localStorage.getItem('gh-token') || '';
+            document.getElementById('gh-repo').value = localStorage.getItem('gh-repo') || '';
+            document.getElementById('tg-token').value = localStorage.getItem('tg-token') || '';
+            document.getElementById('tg-chatid').value = localStorage.getItem('tg-chatid') || '';
+            document.getElementById('dc-webhook').value = localStorage.getItem('dc-webhook') || '';
+            document.getElementById('ntfy-topic').value = localStorage.getItem('ntfy-topic') || '';
         }
 
         // === UI Helpers ===
@@ -959,14 +965,25 @@
                 return;
             }
 
+            saveLocal();
+
             const gh = getGitHub();
             if (!gh) return;
 
             showStatus('info', '⏳ Saving config to GitHub...');
 
             try {
+                // NEVER commit sensitive tokens into public repo files!
+                const safeConfig = JSON.parse(JSON.stringify(config));
+                if (safeConfig.alerts && safeConfig.alerts.telegram) {
+                    safeConfig.alerts.telegram.bot_token = ""; // Kept safe in GitHub Secrets
+                }
+                if (safeConfig.alerts && safeConfig.alerts.discord) {
+                    safeConfig.alerts.discord.webhook_url = ""; // Kept safe in GitHub Secrets
+                }
+
                 // Update config.json in repo
-                const content = btoa(unescape(encodeURIComponent(JSON.stringify(config, null, 2))));
+                const content = btoa(unescape(encodeURIComponent(JSON.stringify(safeConfig, null, 2))));
 
                 // Get current file SHA (if exists)
                 let sha = '';
