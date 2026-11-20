@@ -358,10 +358,22 @@
             </div>
 
             <label>Movie Name</label>
-            <input type="text" id="movie" placeholder="e.g., Pushpa 2">
+            <div style="display:flex; flex-direction:column; gap:8px;">
+                <select id="movie-select" onchange="onMovieSelectChange(this.value)">
+                    <option value="">-- Choose from Hot / Upcoming Movies --</option>
+                </select>
+                <input type="text" id="movie" list="movies-list" placeholder="Or type movie name manually (e.g. Pushpa 2)">
+                <datalist id="movies-list"></datalist>
+            </div>
 
-            <label>Theater Name</label>
-            <input type="text" id="theater" placeholder="e.g., PVR Phoenix MarketCity">
+            <label style="margin-top:16px;">Theater Name</label>
+            <div style="display:flex; flex-direction:column; gap:8px;">
+                <select id="theater-select" onchange="onTheaterSelectChange(this.value)">
+                    <option value="">-- Select a City first to view Theaters --</option>
+                </select>
+                <input type="text" id="theater" list="theaters-list" placeholder="Or type theater name manually (e.g. PVR Providence Mall)">
+                <datalist id="theaters-list"></datalist>
+            </div>
 
             <label>Check next N days</label>
             <input type="number" id="check-days" value="7" min="1" max="30">
@@ -500,15 +512,235 @@
             el.closest('.checkbox-item').classList.toggle('checked', el.checked);
         }
 
+        // === Movie & Theater Databases ===
+        const POPULAR_MOVIES = [
+            "Pushpa 2: The Rule",
+            "Vidaamuyarchi",
+            "Good Bad Ugly",
+            "Game Changer",
+            "Coolie",
+            "Thug Life",
+            "Kanguva",
+            "Vettaiyan",
+            "The Greatest of All Time (GOAT)",
+            "Devara: Part 1",
+            "Kalki 2898 AD",
+            "Kantara: Chapter 1",
+            "Toxic",
+            "War 2",
+            "Salaar: Part 2",
+            "SSMB29",
+            "Gladiator II",
+            "Deadpool & Wolverine",
+            "Avatar: Fire and Ash",
+            "Mission: Impossible - The Final Reckoning",
+            "Moana 2",
+            "Spider-Man 4"
+        ];
+
+        const CITY_THEATERS = {
+            "pondicherry": [
+                "PVR Providence Mall",
+                "Rathna Theatre A/C 4K Dolby Atmos",
+                "Jeeva Complex",
+                "Muruga Theatre A/C DTS",
+                "Raja Theatre",
+                "Balaji Theatre",
+                "Ashok Theatre Villianur",
+                "Vasantharaja Theatre Villianur",
+                "Shanmuga Theatre",
+                "New Cinema Theatre"
+            ],
+            "chennai": [
+                "PVR SPI Palazzo (Nexus Vijaya Mall)",
+                "Sathyam Cinemas (Royapettah)",
+                "AGS Cinemas (Villivakkam)",
+                "AGS Cinemas (T Nagar)",
+                "AGS Cinemas (OMR Navallur)",
+                "Rohini Silver Screens (Koyambedu)",
+                "PVR VR Chennai (Anna Nagar)",
+                "Kamala Cinemas (Vadapalani)",
+                "Sangam Multiplex (Kilpauk)",
+                "Devi Cineplex (Mount Road)",
+                "PVR SPI Escape (Express Avenue)",
+                "Vettri Theatres (Chromepet)",
+                "Kasi Theatre (Jafferkhanpet)",
+                "Mayajaal Multiplex (ECR)"
+            ],
+            "bangalore": [
+                "PVR Forum Mall (Koramangala)",
+                "PVR Vega City (Bannerghatta)",
+                "INOX Nexus Garuda Mall (Magrath Road)",
+                "PVR Orion Mall (Rajajinagar)",
+                "Urvashi Cinema (Lalbagh Road)",
+                "Cinepolis Nexus Shantiniketan (Whitefield)",
+                "INOX Mantri Square (Malleshwaram)",
+                "PVR The Cinema (GT World Mall)"
+            ],
+            "hyderabad": [
+                "Prasad Multiplex (Prasads IMAX)",
+                "AMB Cinemas (Gachibowli)",
+                "PVR Next Galleria (Panjagutta)",
+                "Sudarshan 35MM (RTC X Roads)",
+                "Sandhya 70MM (RTC X Roads)",
+                "Devi 70MM (RTC X Roads)",
+                "AAA Cinemas (Ameerpet)",
+                "PVR Inorbit Mall (Madhapur)"
+            ],
+            "mumbai": [
+                "PVR INOX Maison (Jio World Drive BKC)",
+                "PVR Phoenix Palladium (Lower Parel)",
+                "Gaiety Galaxy (G7 Multiplex Bandra)",
+                "Carnival IMAX (Wadala)",
+                "PVR Infiniti (Andheri West)",
+                "Cinepolis Viviana Mall (Thane)"
+            ],
+            "delhi-ncr": [
+                "PVR Director's Cut (Ambience Mall Vasant Kunj)",
+                "PVR Plaza (Connaught Place)",
+                "PVR Select Citywalk (Saket)",
+                "PVR Logix (Noida)",
+                "INOX Megamall (Gurgaon)"
+            ],
+            "coimbatore": [
+                "Broadway Cinemas (KMCH)",
+                "KG Cinemas",
+                "The Cinema (Brookefields)",
+                "Karpagam Theatres",
+                "INOX Prozone Mall",
+                "Miraj Cinemas"
+            ],
+            "madurai": [
+                "INOX Vishaal De Mall",
+                "Ganesh Cinemas",
+                "Guru Theatres",
+                "Vetri Cinemas",
+                "Ambiga Cinemas"
+            ],
+            "trichy": [
+                "LA Cinemas (Maris Complex)",
+                "Mega Star Theatre",
+                "Ramba Theatre",
+                "Sona Mina Theatres"
+            ],
+            "salem": [
+                "ARRS Multiplex",
+                "Kailash Prakash Theatres",
+                "Sapna Theatre",
+                "ALF Multiplex"
+            ],
+            "tirunelveli": [
+                "Ram Muthuram Cinemas",
+                "Perinba Vilas",
+                "Bombay Theatre"
+            ],
+            "vellore": [
+                "Galaxy Cinemas",
+                "Crown Cinemas",
+                "PVR Velocity"
+            ],
+            "kochi": [
+                "PVR Lulu Mall (Edappally)",
+                "Cinepolis Centre Square Mall",
+                "Shenoys Theatre (MG Road)",
+                "Kavitha Theatre"
+            ],
+            "thiruvananthapuram": [
+                "PVR Lulu Mall (Trivandrum)",
+                "Aries Plex SL Cinemas",
+                "New Theatre",
+                "Kripa Cinemas"
+            ],
+            "vizag": [
+                "Jagadamba 70MM",
+                "Inox Varun Beach",
+                "Inox CMR Central",
+                "Sangam Sarat Theatre"
+            ],
+            "vijayawada": [
+                "PVR Ripples Mall",
+                "Cinepolis PVP Square",
+                "Inox LEPL Icon"
+            ]
+        };
+
+        function populateMovies() {
+            const movieSelect = document.getElementById('movie-select');
+            const moviesList = document.getElementById('movies-list');
+            movieSelect.innerHTML = '<option value="">-- Choose from Hot / Upcoming Movies --</option>';
+            moviesList.innerHTML = '';
+
+            POPULAR_MOVIES.forEach(m => {
+                const opt = document.createElement('option');
+                opt.value = m;
+                opt.textContent = m;
+                movieSelect.appendChild(opt);
+
+                const dataOpt = document.createElement('option');
+                dataOpt.value = m;
+                moviesList.appendChild(dataOpt);
+            });
+        }
+
+        function onMovieSelectChange(val) {
+            if (val) {
+                document.getElementById('movie').value = val;
+            }
+        }
+
+        function onTheaterSelectChange(val) {
+            if (val) {
+                document.getElementById('theater').value = val;
+            }
+        }
+
+        function updateTheatersForCity(cityKey) {
+            const theaterSelect = document.getElementById('theater-select');
+            const theatersList = document.getElementById('theaters-list');
+            theaterSelect.innerHTML = '';
+            theatersList.innerHTML = '';
+
+            const theaters = (cityKey && CITY_THEATERS[cityKey]) ? CITY_THEATERS[cityKey] : [];
+            if (theaters.length > 0) {
+                const defaultOpt = document.createElement('option');
+                defaultOpt.value = "";
+                defaultOpt.textContent = `-- Choose a Theater in ${cityKey.charAt(0).toUpperCase() + cityKey.slice(1)} --`;
+                theaterSelect.appendChild(defaultOpt);
+
+                theaters.forEach(t => {
+                    const opt = document.createElement('option');
+                    opt.value = t;
+                    opt.textContent = t;
+                    theaterSelect.appendChild(opt);
+
+                    const dataOpt = document.createElement('option');
+                    dataOpt.value = t;
+                    theatersList.appendChild(dataOpt);
+                });
+            } else {
+                const defaultOpt = document.createElement('option');
+                defaultOpt.value = "";
+                defaultOpt.textContent = '-- Type your theater name below --';
+                theaterSelect.appendChild(defaultOpt);
+            }
+        }
+
         function onCityChange() {
             const citySel = document.getElementById('city');
             const customBox = document.getElementById('custom-city-box');
+            let cityKey = '';
+
             if (citySel.value === 'other') {
                 customBox.style.display = 'block';
                 document.getElementById('custom-city').focus();
             } else {
                 customBox.style.display = 'none';
+                if (citySel.value) {
+                    cityKey = citySel.value.split('|')[0].toLowerCase();
+                }
             }
+
+            updateTheatersForCity(cityKey);
         }
 
         function showStatus(type, message) {
@@ -742,6 +974,8 @@
         // === Init ===
         window.addEventListener('load', () => {
             loadLocal();
+            populateMovies();
+            onCityChange();
             // Try to load last status if GitHub is configured
             if (document.getElementById('gh-token').value && document.getElementById('gh-repo').value) {
                 loadLastStatus();
