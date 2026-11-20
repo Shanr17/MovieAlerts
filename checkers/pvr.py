@@ -185,8 +185,12 @@ def check(config: dict) -> dict:
     try:
         sess_resp = requests.post(session_url, json=session_payload, headers=headers, timeout=12)
         if sess_resp.status_code != 200:
-            result["reason"] = f"PVR session API returned HTTP {sess_resp.status_code}"
-            logger.info(f"[PVR] {result['reason']}")
+            if sess_resp.status_code == 403:
+                result["reason"] = "PVR direct API geo-blocked on foreign runner (covered by BookMyShow & District)"
+                logger.info("[PVR] ℹ️ PVR direct gateway is geo-blocked on foreign runner. Covered automatically via BookMyShow & District.")
+            else:
+                result["reason"] = f"PVR session API returned HTTP {sess_resp.status_code}"
+                logger.info(f"[PVR] {result['reason']}")
             return result
 
         sess_data = sess_resp.json()
