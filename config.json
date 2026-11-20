@@ -25,22 +25,6 @@
         "pvr": true,
         "district": true
       }
-    },
-    {
-      "id": "1795180773672",
-      "movie": "Scene",
-      "theater": "PVR Providence Mall",
-      "city": "pondicherry",
-      "city_code": "POND",
-      "target_date": "2026-11-21",
-      "bms_code": "ET00516631",
-      "district_id": "MV233181",
-      "slug": "scene",
-      "platforms": {
-        "bms": true,
-        "pvr": true,
-        "district": true
-      }
     }
   ],
   "city": "pondicherry",
