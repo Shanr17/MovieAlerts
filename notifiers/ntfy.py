@@ -66,10 +66,13 @@ def send(config: dict, booking_info: dict) -> bool:
     try:
         url = f"{server}/{topic}"
 
+        # Clean header values to avoid HTTP latin-1 encoding errors with emojis
+        safe_title = f"Booking Open: {movie}".encode("ascii", "ignore").decode("ascii").strip()
+
         headers = {
-            "Title": f"🎬 Booking Open: {movie}",
+            "Title": safe_title,
             "Priority": "urgent",
-            "Tags": "movie,ticket,alert",
+            "Tags": "clapper,tada,ticket",
         }
 
         # Add click action to open booking URL
