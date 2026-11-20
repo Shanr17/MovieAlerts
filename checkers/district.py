@@ -110,8 +110,10 @@ def _search_movie(movie_name: str) -> dict | None:
             for m_id, info in catalog.items():
                 if _fuzzy_match(movie_name, info["title"], threshold=0.55):
                     return info
+        else:
+            logger.info(f"[District] Catalog fetch returned HTTP {resp.status_code}")
     except Exception as e:
-        logger.debug(f"[District] Catalog fetch error: {e}")
+        logger.info(f"[District] Catalog fetch error: {e}")
 
     return None
 
@@ -144,15 +146,22 @@ def check(config: dict) -> dict:
     logger.info(f"[District] Checking for '{movie_name}' at '{theater_name}' in {city}...")
 
     # Step 1: Find movie on District
-    movie_info = _search_movie(movie_name)
-    if not movie_info:
+    mid = config.get("district_id")
+    slug = config.get("slug") or movie_name.lower().replace(" ", "-")
+    film_title = movie_name
+
+    if not mid:
+        movie_info = _search_movie(movie_name)
+        if movie_info:
+            slug = movie_info["slug"]
+            mid = movie_info["id"]
+            film_title = movie_info["title"].title()
+
+    if not mid:
         result["reason"] = f"Movie '{movie_name}' not found on District"
         logger.info(f"[District] {result['reason']}")
         return result
 
-    slug = movie_info["slug"]
-    mid = movie_info["id"]
-    film_title = movie_info["title"].title()
     logger.info(f"[District] Found movie on District: {film_title} ({mid})")
 
     # Step 2: Determine dates to check

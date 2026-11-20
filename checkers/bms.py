@@ -125,7 +125,7 @@ def _get_movies_from_url(url: str) -> list:
             except Exception:
                 continue
     except Exception as e:
-        logger.debug(f"[BMS] Error fetching {url}: {e}")
+        logger.info(f"[BMS] Error fetching {url}: {e}")
     return movies
 
 
@@ -208,9 +208,9 @@ def _check_showtimes_page(city: str, city_code: str, movie_info: dict, date_str:
         except urllib.error.HTTPError as e:
             if e.code == 404:
                 continue
-            logger.debug(f"[BMS] Showtimes check HTTP {e.code} for {url}")
+            logger.info(f"[BMS] Showtimes check HTTP {e.code} for {url}")
         except Exception as e:
-            logger.debug(f"[BMS] Showtimes check error for {url}: {e}")
+            logger.info(f"[BMS] Showtimes check error for {url}: {e}")
 
     return {"available": False, "booking_url": urls_to_try[0], "showtimes": []}
 
@@ -243,7 +243,19 @@ def check(config: dict) -> dict:
     logger.info(f"[BMS] Searching for '{movie_name}' in {city} ({city_code})...")
 
     # Step 1: Find the movie
-    movie_info = _search_movie(city, city_code, movie_name)
+    city_slug = city.lower().replace(" ", "-")
+    event_code = config.get("bms_code")
+    if event_code:
+        slug = config.get("slug") or movie_name.lower().replace(" ", "-")
+        movie_info = {
+            "name": movie_name,
+            "code": event_code,
+            "slug": slug,
+            "url": f"{BMS_BASE}/movies/{city_slug}/{slug}/{event_code}"
+        }
+    else:
+        movie_info = _search_movie(city, city_code, movie_name)
+
     if not movie_info:
         result["reason"] = f"Movie '{movie_name}' not listed yet on BMS for {city}"
         logger.info(f"[BMS] {result['reason']}")

@@ -132,6 +132,9 @@ def get_targets(config: dict) -> list:
                     "platforms": item_platforms,
                     "check_next_days": item.get("check_next_days", config.get("check_next_days", 30)),
                     "alerts": config.get("alerts", {}),
+                    "bms_code": item.get("bms_code", ""),
+                    "district_id": item.get("district_id", ""),
+                    "slug": item.get("slug", ""),
                 })
 
     # If no watchlist entries, fall back to top-level movie config

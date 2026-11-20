@@ -33,6 +33,9 @@
       "city": "pondicherry",
       "city_code": "POND",
       "target_date": "2026-11-21",
+      "bms_code": "ET00516631",
+      "district_id": "MV233181",
+      "slug": "scene",
       "platforms": {
         "bms": true,
         "pvr": true,
