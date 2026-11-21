@@ -22,6 +22,11 @@ on:
       - 'state.json'
       - 'README.md'
 
+# Ensure only one monitor run is active at a time; cancels old runs if config updates
+concurrency:
+  group: movie-ticket-monitor
+  cancel-in-progress: true
+
 env:
   TZ: 'Asia/Kolkata'
   # Movie & Theater config (override config.json)
