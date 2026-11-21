@@ -65,18 +65,35 @@ jobs:
       - name: Install dependencies
         run: pip install -r requirements.txt
 
-      - name: Run monitor (checks twice with 2.5 min interval)
+      - name: Run monitor (checks every 2.5 minutes for ~30 minutes per run)
         run: |
           if [ "${{ github.event.inputs.test_alerts }}" = "true" ]; then
             python monitor.py --test-alerts
           else
-            python monitor.py --iterations 2 --interval 150
+            python monitor.py --iterations 12 --interval 150
           fi
 
       - name: Commit state changes
+        if: always()
         run: |
           git config user.name "Movie Alert Bot"
           git config user.email "movie-alert-bot@users.noreply.github.com"
           git add state.json
           git diff --cached --quiet || git commit -m "🎬 Update alert state [$(TZ='Asia/Kolkata' date '+%Y-%m-%d %H:%M IST')]"
-          git push
+          git push || true
+
+      - name: Continuous Loop (Self-dispatch next run)
+        if: always() && github.event.inputs.test_alerts != 'true'
+        env:
+          GH_PAT: ${{ secrets.GH_PAT }}
+        run: |
+          if [ -n "$GH_PAT" ]; then
+            echo "🚀 Self-chaining: Dispatching next monitor cycle via GitHub API..."
+            curl -s -X POST \
+              -H "Accept: application/vnd.github.v3+json" \
+              -H "Authorization: token $GH_PAT" \
+              https://api.github.com/repos/${{ github.repository }}/actions/workflows/monitor.yml/dispatches \
+              -d '{"ref":"main"}' || true
+          else
+            echo "ℹ️ GH_PAT secret not provided. Scheduled cron will trigger next run."
+          fi

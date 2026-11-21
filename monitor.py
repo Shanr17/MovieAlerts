@@ -42,10 +42,23 @@ logger = logging.getLogger(__name__)
 BASE_DIR = Path(__file__).parent
 CONFIG_PATH = BASE_DIR / "config.json"
 STATE_PATH = BASE_DIR / "state.json"
+ENV_PATH = BASE_DIR / ".env"
 
 
 def load_config() -> dict:
     """Load configuration from config.json or environment variables."""
+    # Load .env if present
+    if ENV_PATH.exists():
+        try:
+            with open(ENV_PATH, "r", encoding="utf-8") as f:
+                for line in f:
+                    line = line.strip()
+                    if line and not line.startswith("#") and "=" in line:
+                        k, v = line.split("=", 1)
+                        os.environ.setdefault(k.strip(), v.strip().strip("'\""))
+        except Exception as e:
+            logger.debug(f"Could not load .env: {e}")
+
     # Load base config from file
     if CONFIG_PATH.exists():
         with open(CONFIG_PATH, "r") as f:
