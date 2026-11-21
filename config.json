@@ -12,19 +12,6 @@
         "pvr": true,
         "district": true
       }
-    },
-    {
-      "id": "1795177694294",
-      "movie": "O.M OPERATION MOLE",
-      "theater": "PVR Providence Mall",
-      "city": "pondicherry",
-      "city_code": "POND",
-      "target_date": "2026-11-23",
-      "platforms": {
-        "bms": true,
-        "pvr": true,
-        "district": true
-      }
     }
   ],
   "city": "pondicherry",
